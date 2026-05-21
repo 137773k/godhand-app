@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>上帝之手 - 清洁数据仪表盘</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0f1117;
+    color: #e8eaed;
+    display: flex; justify-content: center;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+  .phone {
+    width: 390px; min-height: 844px;
+    background: #0f1117;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Status Bar */
+  .status-bar {
+    padding: 14px 20px 8px;
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: #8e94a0;
+  }
+
+  /* Header */
+  .header {
+    padding: 8px 20px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .header h1 {
+    font-size: 24px; font-weight: 700;
+    background: linear-gradient(135deg, #00d4ff, #7b61ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header-actions { display: flex; gap: 12px; }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: #1a1d27; border: none; color: #8e94a0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; transition: 0.2s;
+  }
+  .icon-btn:hover { background: #252a36; color: #00d4ff; }
+  .badge-dot {
+    position: relative;
+  }
+  .badge-dot::after {
+    content: ''; position: absolute; top: 6px; right: 6px;
+    width: 8px; height: 8px; background: #ff4757; border-radius: 50%;
+    border: 2px solid #1a1d27;
+  }
+
+  /* Primary Progress Card */
+  .progress-card {
+    margin: 0 16px 14px;
+    background: linear-gradient(135deg, #1a1d27 0%, #1f2740 100%);
+    border-radius: 18px; padding: 18px 18px 14px;
+    border: 1px solid #252a36;
+    position: relative; overflow: hidden;
+  }
+  .progress-card::before {
+    content: ''; position: absolute; top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(0,212,255,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .progress-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    position: relative; z-index: 1;
+  }
+  .progress-label { font-size: 12px; color: #8e94a0; text-transform: uppercase; letter-spacing: 1px; }
+  .streak-badge {
+    background: linear-gradient(135deg, #ff6b35, #ff4757);
+    padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600;
+  }
+  .main-stat {
+    margin-top: 10px; position: relative; z-index: 1;
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .main-stat .number { font-size: 42px; font-weight: 700; letter-spacing: -1px; }
+  .main-stat .unit { font-size: 14px; color: #8e94a0; }
+  .mini-stats {
+    display: flex; gap: 24px; margin-top: 10px; position: relative; z-index: 1;
+    padding-top: 10px; border-top: 1px solid #252a36;
+  }
+  .mini-stat .label { font-size: 11px; color: #6b7280; }
+  .mini-stat .value { font-size: 16px; font-weight: 600; }
+  .mini-stat .change { font-size: 11px; }
+  .change.up { color: #00d4ff; }
+  .change.down { color: #ff6b35; }
+
+  /* Section Title Row */
+  .section-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 20px 6px;
+  }
+  .section-row h3 { font-size: 15px; font-weight: 600; }
+  .section-row .see-all { font-size: 12px; color: #00d4ff; text-decoration: none; cursor: pointer; }
+
+  /* Today Tasks - Horizontal Scroll Cards */
+  .task-scroll {
+    display: flex; gap: 10px; padding: 0 16px 8px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .task-scroll::-webkit-scrollbar { display: none; }
+  .task-card {
+    min-width: 160px; background: #1a1d27;
+    border-radius: 14px; padding: 14px;
+    border: 1px solid #252a36;
+    cursor: pointer; transition: 0.2s;
+  }
+  .task-card:hover { border-color: #00d4ff44; }
+  .task-card .icon-circle {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; margin-bottom: 8px;
+  }
+  .icon-workout { background: rgba(0,212,255,0.15); color: #00d4ff; }
+  .icon-diet { background: rgba(123,97,255,0.15); color: #7b61ff; }
+  .icon-water { background: rgba(0,200,255,0.15); color: #00c8ff; }
+  .task-card h4 { font-size: 13px; margin-bottom: 4px; }
+  .task-card .sub { font-size: 11px; color: #6b7280; }
+  .task-card .xp-tag {
+    display: inline-block; margin-top: 8px;
+    font-size: 10px; color: #ffd700; background: rgba(255,215,0,0.1);
+    padding: 2px 6px; border-radius: 4px;
+  }
+
+  /* Progress ring */
+  .ring-container {
+    position: relative; width: 56px; height: 56px;
+    float: right; margin-top: -8px;
+  }
+  .ring-bg {
+    fill: none; stroke: #252a36; stroke-width: 5;
+  }
+  .ring-fg {
+    fill: none; stroke: #00d4ff; stroke-width: 5;
+    stroke-linecap: round;
+    transform: rotate(-90deg); transform-origin: center;
+    transition: stroke-dashoffset 0.8s;
+  }
+  .ring-text {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px; font-weight: 700; color: #00d4ff;
+  }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: sticky; bottom: 0;
+    display: flex; justify-content: space-around;
+    padding: 8px 0 20px;
+    background: linear-gradient(0deg, #0f1117 80%, transparent);
+    border-top: 1px solid #1a1d27;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    color: #6b7280; font-size: 10px; cursor: pointer; transition: 0.2s;
+    border: none; background: none;
+  }
+  .nav-item .nav-icon { font-size: 20px; }
+  .nav-item.active { color: #00d4ff; }
+
+  /* Level Progress Bar */
+  .level-bar-wrap {
+    margin: 0 16px 12px; background: #1a1d27; border-radius: 6px;
+    height: 4px; position: relative;
+  }
+  .level-bar-fill {
+    height: 100%; background: linear-gradient(90deg, #00d4ff, #7b61ff);
+    border-radius: 6px; width: 68%; transition: width 0.5s;
+  }
+  .level-label {
+    display: flex; justify-content: space-between;
+    padding: 4px 16px 0; font-size: 10px; color: #6b7280;
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>📶 🔋 85%</span>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>上帝之手</h1>
+    <div class="header-actions">
+      <button class="icon-btn badge-dot">🔔</button>
+      <button class="icon-btn" style="font-size:12px;font-weight:700;">Lv.12</button>
+    </div>
+  </div>
+
+  <!-- XP Level Bar -->
+  <div class="level-bar-wrap">
+    <div class="level-bar-fill"></div>
+  </div>
+  <div class="level-label">
+    <span>Lv.12 · 战士</span>
+    <span>680 / 1000 XP</span>
+  </div>
+
+  <!-- Main Progress Card -->
+  <div class="progress-card">
+    <div class="progress-header">
+      <span class="progress-label">📊 本周进度</span>
+      <span class="streak-badge">🔥 连续 7 天</span>
+    </div>
+    <div class="main-stat">
+      <span class="number">78.5</span>
+      <span class="unit">kg</span>
+      <div class="ring-container">
+        <svg width="56" height="56" viewBox="0 0 56 56">
+          <circle class="ring-bg" cx="28" cy="28" r="24"/>
+          <circle class="ring-fg" cx="28" cy="28" r="24"
+            stroke-dasharray="150.8" stroke-dashoffset="48"/>
+        </svg>
+        <span class="ring-text">68%</span>
+      </div>
+    </div>
+    <div class="mini-stats">
+      <div class="mini-stat">
+        <div class="label">体脂</div>
+        <div class="value">18.2<span class="unit" style="font-size:11px;color:#8e94a0;">%</span></div>
+        <div class="change down">↓ 0.8%</div>
+      </div>
+      <div class="mini-stat">
+        <div class="label">肌肉</div>
+        <div class="value">34.1<span class="unit" style="font-size:11px;color:#8e94a0;">kg</span></div>
+        <div class="change up">↑ 0.3kg</div>
+      </div>
+      <div class="mini-stat">
+        <div class="label">目标差距</div>
+        <div class="value">3.5<span class="unit" style="font-size:11px;color:#8e94a0;">kg</span></div>
+        <div class="change" style="color:#ffd700;">📅 约6周</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's Tasks -->
+  <div class="section-row">
+    <h3>🎯 今日任务</h3>
+    <a class="see-all" href="#">查看全部 →</a>
+  </div>
+  <div class="task-scroll">
+    <div class="task-card">
+      <div class="icon-circle icon-workout">🏋️</div>
+      <h4>胸 + 三头训练</h4>
+      <div class="sub">45分钟 · 6个动作</div>
+      <div class="sub">⏰ 16:00 提醒</div>
+      <span class="xp-tag">+120 XP</span>
+    </div>
+    <div class="task-card">
+      <div class="icon-circle icon-diet">🥗</div>
+      <h4>高蛋白午餐</h4>
+      <div class="sub">鸡胸肉 + 糙米 + 西兰花</div>
+      <div class="sub">🔥 约 580 kcal</div>
+      <span class="xp-tag">+50 XP</span>
+    </div>
+    <div class="task-card">
+      <div class="icon-circle icon-water">💧</div>
+      <h4>饮水目标</h4>
+      <div class="sub">已喝 1.2L / 2.5L</div>
+      <div class="sub">还剩 5 杯</div>
+      <span class="xp-tag">+30 XP</span>
+    </div>
+    <div class="task-card">
+      <div class="icon-circle" style="background:rgba(255,107,53,0.15);color:#ff6b35;">📸</div>
+      <h4>周度拍照对比</h4>
+      <div class="sub">今天是拍照日</div>
+      <div class="sub">已连续 4 周</div>
+      <span class="xp-tag">+80 XP</span>
+    </div>
+  </div>
+
+  <!-- Diet & Training Quick Access -->
+  <div class="section-row">
+    <h3>⚡ 快捷入口</h3>
+  </div>
+  <div style="display:flex;gap:10px;padding:0 16px 12px;">
+    <div style="flex:1;background:#1a1d27;border-radius:14px;padding:14px;border:1px solid #252a36;cursor:pointer;">
+      <div style="font-size:24px;margin-bottom:6px;">🍽️</div>
+      <div style="font-size:13px;font-weight:600;">饮食方案</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:2px;">今日剩余 1200 kcal</div>
+    </div>
+    <div style="flex:1;background:#1a1d27;border-radius:14px;padding:14px;border:1px solid #252a36;cursor:pointer;">
+      <div style="font-size:24px;margin-bottom:6px;">🏃</div>
+      <div style="font-size:13px;font-weight:600;">训练计划</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:2px;">本周第 3/5 次</div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div class="nav-item active"><span class="nav-icon">🏠</span>首页</div>
+    <div class="nav-item"><span class="nav-icon">📋</span>计划</div>
+    <div class="nav-item"><span class="nav-icon">➕</span>打卡</div>
+    <div class="nav-item"><span class="nav-icon">📊</span>数据</div>
+    <div class="nav-item"><span class="nav-icon">👤</span>我的</div>
+  </div>
+
+</div>
+</body>
+</html>
