@@ -48,7 +48,7 @@ export default function App() {
     if (Platform.OS !== 'web') return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500&display=swap';
+    link.href = 'https://fonts.loli.net/css2?family=Noto+Serif+SC:wght@300;400;500&display=swap';
     document.head.appendChild(link);
     return () => { link.remove(); };
   }, []);
