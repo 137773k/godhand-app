@@ -1,0 +1,42 @@
+# 任务：将 3D 怪兽替换为像素插画风格
+
+## 目标
+移除 Three.js 3D 渲染，改用像素插画风格的怪物精灵，7 只不同造型。
+
+## 当前状态
+- MonsterBattle.tsx 第 13 行 import Monster3D from './Monster3D'
+- Monster3D.tsx 使用 @react-three/fiber + three.js 渲染 3D Low Poly 怪兽
+- Props 接口: { monsterIndex: number, defeated: boolean, isHit: boolean, size: number }
+- 怪兽列表: useGameState.ts MONSTERS 数组（肥胖巨魔、脂肪龙、糖分怪、熬夜僵尸、暴食暴龙、偷懒恶魔、赘肉野猪）
+
+## 要求
+1. 创建新组件 `components/PixelMonster.tsx`，替代 Monster3D.tsx
+2. 使用纯 React Native 组件（View + 颜色方块）绘制像素插画风格怪兽，**不需要**额外 npm 包
+3. 用 16×16 或 20×20 的像素网格表示怪兽，每个像素是一个 4-6px 的小方块 View
+4. 7 只怪兽各有不同颜色和造型（像素精灵风，参考 NES/GameBoy 时代 RPG 怪物）
+5. 保持相同的 Props 接口：{ monsterIndex, defeated, isHit, size }
+6. 受击时怪物变红闪烁，击败时碎成像素散落动画
+7. 修改 MonsterBattle.tsx：把 `import Monster3D` 改为 `import PixelMonster`，把 `<Monster3D ...>` 改为 `<PixelMonster ...>`
+8. 完成后卸载 Three.js 依赖：npm uninstall three @react-three/fiber @react-three/drei
+
+## 像素怪物配色参考
+- index 0 肥胖巨魔：粉色系 (#FFB5C2 → #FF8FA3)，圆胖体型
+- index 1 脂肪龙：暗绿系 (#2D6A4F → #40916C)，龙形
+- index 2 糖分怪：糖果色 (#FF70A6 → #FFD166)，泡泡状
+- index 3 熬夜僵尸：灰紫系 (#6C757D → #9D4EDD)，骷髅形
+- index 4 暴食暴龙：深红棕 (#9B2226 → #CA6702)，大型恐龙
+- index 5 偷懒恶魔：暗紫系 (#5A189A → #7B2CBF)，小恶魔角
+- index 6 赘肉野猪：棕褐系 (#7F4F24 → #B08968)，野猪獠牙
+
+## 动画要求
+- 受击（isHit=true）：整体闪烁红色 300ms
+- 击败（defeated=true）：像素块渐隐 + 向外散开（translateX/Y 随机偏移）
+- 默认：微小呼吸动画（scale 1.0 ↔ 1.05 循环）
+
+## 文件清单
+- 新建：components/PixelMonster.tsx
+- 修改：components/MonsterBattle.tsx（改 import 和 JSX）
+- 删除/替换：components/Monster3D.tsx（可保留不删，只改引用）
+- 卸载包：three, @react-three/fiber, @react-three/drei
+
+请用中文回复，完成后列出修改的文件。

@@ -26,10 +26,18 @@ export const Colors = {
   emberButton: '#d45830',
   emberButtonText: '#fcf7f2',
   emberBorder: 'rgba(224, 97, 58, 0.10)',
+  emberDeep: '#c0392b',
+  emberGlow: 'rgba(224, 97, 58, 0.24)',
+  emberGradientStart: '#e0613a',
+  emberGradientEnd: '#c0392b',
 
   // ── 暖金（降级为装饰用，不再主交互）──
   gold: '#bfa06a',
   goldBorder: 'rgba(191, 160, 106, 0.06)',
+  goldLight: 'rgba(191, 160, 106, 0.14)',
+  goldButton: '#d45830',
+  goldButtonText: '#fcf7f2',
+  goldMuted: 'rgba(224, 97, 58, 0.22)',
 
   // ── 渐变氛围 ──
   gradientTop: '#1c1814',
@@ -41,6 +49,9 @@ export const Colors = {
   error: '#e5484d',
   info: '#5e6ad2',
 } as const;
+
+export const emberGradient = [Colors.emberGradientStart, Colors.emberGradientEnd] as const;
+export const emberGradientSoft = [Colors.ember, Colors.emberDeep] as const;
 
 export const Typography = {
   hero: {

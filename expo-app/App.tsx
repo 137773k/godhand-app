@@ -28,9 +28,9 @@ const theme: Theme = {
     ...DarkTheme.colors,
     background: Colors.bg,
     card: Colors.bg,
-    border: Colors.goldBorder,
-    notification: Colors.goldButton,
-    primary: Colors.gold,
+    border: Colors.emberBorder,
+    notification: Colors.emberButton,
+    primary: Colors.ember,
     text: Colors.textPrimary,
   },
 };

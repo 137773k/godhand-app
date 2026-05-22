@@ -1,0 +1,65 @@
+# 上帝之手 — 怪兽图标 3D 升级
+
+## 任务
+将 MonsterBattle 组件的 emoji 怪兽图标替换为真正的 3D 渲染模型。
+
+## 方案
+使用 three.js + React Three Fiber (@react-three/fiber + @react-three/drei) 在 MonsterBattle 组件中渲染简单但有力的 3D 怪兽几何体。
+
+## 需要安装的依赖
+```
+npm install three @react-three/fiber @react-three/drei @types/three
+```
+
+## 具体改动
+
+### 1. 新建 `components/Monster3D.tsx`
+为每个怪兽创建对应的 3D 几何体，用简单的 primitives（球、锥、圆柱、环）组合出有辨识度的怪兽造型。使用 `@react-three/fiber` 的 Canvas。
+
+7个怪兽的3D设计：
+- 👹 肥胖巨魔 → 大红色球体+犄角(cone)+小眼睛
+- 🐉 脂肪龙 → 绿色椭球体+翅膀(pyramid)+尾巴
+- 👾 糖分怪 → 紫色多面体+尖刺+发光材质
+- 🧟 熬夜僵尸 → 灰绿色异形体+凹陷眼睛
+- 🦖 暴食暴龙 → 深绿粗壮体+大嘴+背刺
+- 😈 偷懒恶魔 → 暗红色+小角+狡黠表情
+- 🐗 赘肉野猪 → 棕色圆体+獠牙
+
+每个怪兽的 3D 场景包含：
+- 主体几何体（带材质和光照）
+- 环境光 + 点光源（余烬橙色调）
+- 缓慢自转动画（useFrame）
+- Canvas 背景透明，融入卡片
+- 受击和击败时触发 3D 动画（抖动/旋转缩小/爆炸）
+
+Props:
+```ts
+type Props = {
+  monsterIndex: number;
+  defeated: boolean;
+  isHit: boolean;
+  size?: number; // default 84
+}
+```
+
+### 2. 更新 `components/MonsterBattle.tsx`
+- 将 emoji `<Text>` 替换为 `<Monster3D>` 组件
+- 保持现有的受击/击败动画逻辑
+- 3D Canvas 高度 84-100px，透明背景融入卡片
+
+### 3. 确保性能
+- Canvas 设置 `frameloop="demand"`，只在动画时渲染
+- 使用低多边形模型（< 500 面）
+- 简单材质（MeshStandardMaterial + color）
+
+## 设计风格
+- 低多边形(Low Poly)风格 — 有力量感但不复杂
+- 余烬橙/深红暖色调打光
+- 融合暗色锻造炉背景
+- 3D 感但不过于真实 — 保持游戏化风格
+
+## 注意事项
+- 保留所有现有的游戏逻辑（useGameState, completeTask 等）
+- 3D Canvas 在 ScrollView 中可能需要 `pointerEvents` 处理
+- 确保在 Web 端正常工作（Expo web 支持 three.js）
+- 所有中文保持 UTF-8
