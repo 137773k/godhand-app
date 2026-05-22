@@ -1,0 +1,82 @@
+# 上帝之手 — 集成打怪兽游戏化系统
+
+## 任务目标
+将现有的怪兽战斗游戏化系统从 HTML 草图迁移到 React Native (Expo) App 中。
+
+## 参考文件
+1. 现有怪兽系统草图：C:\Users\86180\Desktop\上帝之手\sketches\005-apple-warm\index.html
+   - 包含7只怪兽（肥胖巨魔、脂肪龙、糖分怪、熬夜僵尸、暴食暴龙、偷懒恶魔、赘肉野猪）
+   - 完整的 HP/XP/升级/每日重置/localStorage 系统
+   - 怪兽受击/击败动画、XP飘字、胜利弹窗
+2. 当前 App 代码在：C:\Users\86180\Desktop\上帝之手\expo-app\
+3. 主题文件：theme.ts（已改为余烬橙 #e0613a，锻造炉风格）
+
+## 具体改动
+
+### 1. 新建 `hooks/useGameState.ts`
+- 使用 React Native AsyncStorage 替代 localStorage
+- 实现完整的游戏状态管理：
+  - state 对象：date, level, xp, xpToNext, streak, totalDays, gems, monsterIdx, monsterHP, monsterMaxHP, monsterDefeated, completedTasks
+  - MONSTERS 数组（7只，从HTML草图中复制）
+  - getDefaultState() — 每日重置逻辑
+  - loadState() / saveState() — AsyncStorage 持久化
+  - completeTask(taskId, xpAmount) — 完成任务→加XP→对怪兽造成伤害
+  - damageMonster(amount) — 扣HP→检查击杀→触发奖励
+  - checkLevelUp() — while循环处理连续升级
+  - 导出 useGameState() hook
+
+### 2. 新建 `components/MonsterBattle.tsx`
+- 怪兽展示卡片组件，风格要"打怪兽RPG游戏"感：
+  - 怪兽 emoji（大号，如 64px）
+  - 怪兽名字 + 背景故事 title
+  - HP 血条（渐变色，ember橙→红，平滑动画）
+  - 击败奖励显示（+XP +💎）
+  - 击败状态 overlay
+- 动画效果（React Native Animated）：
+  - 受击抖动（X轴快速振荡）
+  - 击败消失（缩放+旋转+淡出）
+- 点击怪兽造成微量伤害（1-10随机）
+
+### 3. 更新 `screens/HomeScreen.tsx`
+- 在 Hero 头部下方集成 MonsterBattle 组件
+- 顶部状态栏显示：等级 Lv.X + XP进度条
+- 任务完成时调用 completeTask()，触发怪兽战斗
+- 统计卡片改为游戏化数据：连续天数、累计击败怪兽数
+- 底部 TabBar 保持，但配色改为余烬橙
+
+### 4. 创建 `components/XpPopup.tsx`
+- XP飘字动画组件
+- 完成任务后从完成位置飘出 "+{{xp}} XP"
+
+### 5. 创建 `components/VictoryModal.tsx`
+- 击败怪兽后弹出胜利弹窗
+- 显示怪兽emoji、获得的XP和钻石
+- "继续战斗" 按钮关闭
+
+### 6. 更新 `screens/LoginScreen.tsx`
+- 去掉钻石徽标、装饰金线等奢侈品元素
+- "HAND OF GOD" 更大更粗（fontWeight 800, fontSize 40）
+- tagline 改为战斗口号："锻造身体 · 击杀弱点"（700 weight）
+- 按钮改为余烬橙 ember 色
+- 氛围光晕改为余烬火光
+
+### 7. 更新 `theme.ts`
+- 保持 ember 余烬橙主题（已完成）
+- 添加游戏相关颜色：emberGradient（ember→深红渐变用于血条）
+
+## 设计风格要求
+- **不是奢侈品，是RPG游戏** — 大胆、有力、动感
+- 余烬橙 #e0613a 作为主强调色
+- 深棕底色 #171310 作为锻造炉背景
+- 血条用渐变：ember → 深红 #c0392b
+- 粗体无衬线字体，强对比
+- 动画要有冲击力（不是微妙的淡入，是游戏感的打击反馈）
+
+## 注意事项
+- 所有中文内容必须保持 UTF-8 编码
+- 使用 expo 已有的依赖（expo-linear-gradient, @expo/vector-icons）
+- 需要安装 @react-native-async-storage/async-storage
+- 所有颜色使用 theme.ts 中的 Colors 引用，不要硬编码
+- 组件 Props 类型要完整定义
+- 先 npm install 新依赖，再修改代码
+- 保持 LoginScreen 的登录逻辑不变，只改视觉

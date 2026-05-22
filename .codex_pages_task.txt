@@ -1,0 +1,72 @@
+在 expo-app/screens/ 目录创建以下 React Native 页面，保持与 LoginScreen 一致的暗金极简风格。
+
+## 统一设计规范（所有页面必须遵守）
+- 背景色: #040506，文字色: #f8f3ea，金色强调: #f5d79d / #e6ad54
+- 字体: Arial Black(标题) + 系统默认(正文)
+- 卡片: 半透明深灰 rgba(20,21,24,0.76)，圆角14px，边框 rgba(255,225,160,0.08)
+- 按钮: 金色 #f0b45c，圆角14px，minHeight 48
+- 输入框: 半透明深灰底 + 底部1px金线
+- 间距: gap 8-12px，padding 14-18px
+- 无header导航栏，使用 SafeAreaView
+- 所有页面可滚动
+
+## 需要创建的页面
+
+### 1. BasicInfoScreen.tsx — 基础信息录入
+- 标题 "基础信息"
+- 表单字段：性别(男/女切换)、年龄(数字输入)、身高(cm)、体重(kg)、运动频率(从不/每周1-2次/3-4次/5次以上)
+- 底部 "下一步" 按钮 → navigate 到 GoalSelect
+
+### 2. GoalSelectScreen.tsx — 目标身材选择
+- 标题 "选择你的目标"
+- 6个目标卡片(2列网格)：精瘦型、肌肉型、线条型、宽肩倒三角、翘臀腿型、运动表现型
+- 每个卡片带图标和简短描述
+- 选中态高亮金色边框，未选中暗色
+- 底部 "下一步" 按钮(选中后才能点) → navigate 到 PhotoAssess
+
+### 3. PhotoAssessScreen.tsx — AI拍照评估
+- 标题 "拍照评估"
+- 说明文字引导用户拍正面全身照
+- 圆形相机取景框区域(占位，后接expo-camera)
+- "拍照" 和 "从相册选择" 两个按钮
+- 下方显示评估结果区域(占位)
+- 底部 "开始生成方案" → navigate 到 Home
+
+### 4. HomeScreen.tsx — 首页仪表盘 (替换现有占位)
+- 顶部 "HAND OF GOD" 
+- 用户问候 "早上好/下午好/晚上好"
+- 今日概览卡片：今日训练(完成/未完成)、今日饮食(热量进度)、连续打卡天数
+- 快捷入口：训练计划、饮食方案、拍照评估
+- 底部导航提示(用文字链接模拟)
+
+### 5. TrainingScreen.tsx — 训练计划
+- 标题 "今日训练"
+- 训练项目列表(每项：动作名、组数x次数、完成checkbox)
+- 每项可展开看动作描述
+- 底部 "完成训练" 按钮
+
+### 6. DietScreen.tsx — 饮食方案
+- 标题 "今日饮食"
+- 热量进度条(已摄入/目标)
+- 三餐卡片：早餐/午餐/晚餐/加餐
+- 每餐：食物名称、热量、蛋白质
+- 底部 "添加食物" 按钮
+
+### 7. ProgressScreen.tsx — 进度追踪
+- 标题 "我的进度"
+- 体重变化区域(占位图表)
+- 本周数据：训练完成率、饮食执行率
+- 照片对比区(占位)
+- 周报摘要卡片
+
+## 导航更新
+修改 App.tsx 的 Stack Navigator，添加所有新页面的路由：
+Login → BasicInfo → GoalSelect → PhotoAssess → Home
+Home 可以跳转到 Training, Diet, Progress
+
+## 注意事项
+- 用 StyleSheet.create，不用内联样式
+- 所有文字中文
+- 页面间通过 navigation.navigate 跳转
+- 暂用模拟数据，不接真实API
+- 更新 navigation/types.ts 添加所有路由类型

@@ -1,0 +1,16 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.12.1
+2 info using node@v24.15.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\86180\.npmrc
+5 silly config load:file:C:\Users\86180\Desktop\上帝之手\.npmrc
+6 silly config load:file:C:\Users\86180\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm exec create-expo-app@latest expo-app --template blank-typescript --yes
+8 verbose argv "exec" "--" "create-expo-app@latest" "expo-app" "--template" "blank-typescript" "--yes"
+9 verbose logfile logs-max:10 dir:C:\Users\86180\Desktop\上帝之手\.cache\npm\_logs\2026-05-21T12_31_20_288Z-
+10 verbose logfile C:\Users\86180\Desktop\上帝之手\.cache\npm\_logs\2026-05-21T12_31_20_288Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+13 http fetch GET 200 https://registry.npmjs.org/create-expo-app 870ms (cache revalidated)
+14 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+15 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736

@@ -1,0 +1,43 @@
+将当前项目改造为 React Native + Expo 移动端APP项目。
+
+## 项目背景
+- 这是一个健身AI教练APP，叫"上帝之手"
+- 已有登录界面设计在 sketches/010-realistic-hand-login/index.html（纯HTML）
+- 产品文档在根目录的 .md 文件中
+- 现有的 frontend/ 是 Vite React 项目，需要替换
+
+## 执行步骤
+
+### 1. 创建新的 React Native + Expo 项目
+在项目根目录创建新的 expo-app/ 目录：
+- 使用 npx create-expo-app@latest expo-app --template blank-typescript
+- 安装必要依赖：
+  - @react-navigation/native（页面导航）
+  - @react-navigation/native-stack（页面栈导航）
+  - expo-camera（拍照评估）
+  - expo-notifications（提醒）
+  - @expo/vector-icons（图标）
+
+### 2. 迁移登录页面到 React Native
+参考 sketches/010-realistic-hand-login/index.html 的设计，创建：
+- expo-app/screens/LoginScreen.tsx
+- 保持原有暗金配色和风格
+- 使用 React Native 组件：View, Text, TextInput, TouchableOpacity, StyleSheet
+- 包含：+86手机号输入、验证码+发送按钮、协议勾选、开始登录按钮、注册链接
+- 保留原有JS逻辑：手机号校验、验证码倒计时、按钮三态、Toast
+
+### 3. 创建页面导航结构
+- expo-app/App.tsx 设置 NavigationContainer + Stack Navigator
+- 登录页 → 首页（先创建占位）
+
+### 4. 创建首页占位
+- expo-app/screens/HomeScreen.tsx
+- 显示"HAND OF GOD"标题
+- 后续再填充内容
+
+### 5. 确保项目能运行
+- 所有TypeScript类型正确
+- 依赖安装完整
+- 可运行 npx expo start
+
+完成后删除旧的 frontend/ 目录（内容已无用）。

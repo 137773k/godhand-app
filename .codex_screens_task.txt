@@ -1,0 +1,30 @@
+在 expo-app/ 目录中创建以下文件。项目基础已搭好，依赖已安装。
+
+## 1. 创建 screens/LoginScreen.tsx
+参考 sketches/010-realistic-hand-login/index.html 的设计风格：
+- 暗色背景 #040506，金色配色体系
+- HAND OF GOD 标题（字号适中，Arial Black风格）
+- 副标题 "把未来拖到掌心里，克制到只剩下力量和光。"
+- 第一个输入框：左侧+86淡金标签 + 手机号输入（半透明深灰底，底部金线，圆角）
+- 第二个输入框：验证码输入 + 右侧内嵌"发送验证码"按钮
+- 同意协议 checkbox + 开始登录按钮 + 还没有账号注册链接
+- 顶部 Toast 提示
+- 完整交互逻辑：手机号11位校验、验证码6位、60秒倒计时、按钮disabled/active/loading三态
+
+## 2. 创建 screens/HomeScreen.tsx
+占位页面：
+- 显示 "HAND OF GOD" 
+- 显示 "首页" 
+- 暗色背景
+
+## 3. 修改 App.tsx
+设置 NavigationContainer + Stack Navigator：
+- 初始页面 LoginScreen
+- 登录成功后 navigate 到 HomeScreen
+- 隐藏导航栏header
+
+## 注意事项
+- 使用 StyleSheet.create 管理样式
+- useState/useRef 管理状态
+- 所有文字用中文
+- 不要 import 不存在的库
