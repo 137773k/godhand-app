@@ -37,7 +37,10 @@ export default function PhotoAssessScreen({ navigation, route }: Props) {
   const [activeTab, setActiveTab] = useState<CaptureTab>('front');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisDone, setAnalysisDone] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionStep, setTransitionStep] = useState(0);
   const pulse = useRef(new Animated.Value(0)).current;
+  const transitionOpacity = useRef(new Animated.Value(0)).current;
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const basicInfo = route.params?.basicInfo;
@@ -73,6 +76,39 @@ export default function PhotoAssessScreen({ navigation, route }: Props) {
     loop.start();
     return () => loop.stop();
   }, [isAnalyzing, pulse]);
+
+  // 过渡动画：淡入效果
+  useEffect(() => {
+    if (!isTransitioning) {
+      transitionOpacity.setValue(0);
+      return;
+    }
+    Animated.timing(transitionOpacity, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+  }, [isTransitioning, transitionOpacity]);
+
+  // 过渡步骤动画
+  useEffect(() => {
+    if (!isTransitioning) return;
+    const steps = [
+      { delay: 300, text: '体态数据汇总完成' },
+      { delay: 900, text: '身体成分分析完毕' },
+      { delay: 1500, text: '生成个性化蜕变方案' },
+    ];
+    const timers = steps.map((step, i) =>
+      setTimeout(() => setTransitionStep(i + 1), step.delay)
+    );
+    const navTimer = setTimeout(() => {
+      navigation.navigate('GoalSelect', { assessment: assessmentResult });
+    }, 2200);
+    return () => {
+      timers.forEach(clearTimeout);
+      clearTimeout(navTimer);
+    };
+  }, [isTransitioning, navigation]);
 
   useEffect(() => {
     return () => {
@@ -206,8 +242,54 @@ export default function PhotoAssessScreen({ navigation, route }: Props) {
       <PrimaryButton
         label={analysisDone ? '继续 → 选择目标' : '开始分析'}
         loading={isAnalyzing}
-        onPress={analysisDone ? () => navigation.navigate('GoalSelect', { assessment: assessmentResult }) : handleAnalyze}
+        disabled={isTransitioning}
+        onPress={analysisDone ? () => setIsTransitioning(true) : handleAnalyze}
       />
+
+      {/* 过渡加载页 */}
+      {isTransitioning ? (
+        <Animated.View style={[styles.transitionOverlay, { opacity: transitionOpacity }]}>
+          <View style={styles.transitionContent}>
+            {/* 锻造动画 */}
+            <View style={styles.forgeIcon}>
+              <Ionicons name="flame" size={48} color={Colors.ember} />
+              <View style={styles.forgeGlow} />
+            </View>
+
+            <Text style={styles.transitionTitle}>正在锻造你的蜕变计划</Text>
+            <Text style={styles.transitionSub}>基于体态数据生成专属训练与饮食方案</Text>
+
+            {/* 进度步骤 */}
+            <View style={styles.transitionSteps}>
+              {[
+                { step: 1, label: '体态数据汇总完成', icon: 'body-outline' },
+                { step: 2, label: '身体成分分析完毕', icon: 'analytics-outline' },
+                { step: 3, label: '生成个性化蜕变方案', icon: 'rocket-outline' },
+              ].map((item) => {
+                const done = transitionStep >= item.step;
+                const current = transitionStep === item.step - 1;
+                return (
+                  <View key={item.step} style={styles.transitionStep}>
+                    <View style={[styles.stepDot, done && styles.stepDotDone, current && styles.stepDotCurrent]}>
+                      {done ? (
+                        <Ionicons name="checkmark" size={12} color={Colors.emberButtonText} />
+                      ) : current ? (
+                        <ActivityIndicator size="small" color={Colors.ember} />
+                      ) : (
+                        <View style={styles.stepDotEmpty} />
+                      )}
+                    </View>
+                    <Text style={[styles.stepLabel, (done || current) && styles.stepLabelActive]}>
+                      {item.label}
+                    </Text>
+                    {item.step < 3 ? <View style={[styles.stepLine, done && styles.stepLineDone]} /> : null}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </Animated.View>
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -430,5 +512,105 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 13,
     lineHeight: 20,
+  },
+  // ── 过渡加载页 ──
+  transitionOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.bgOverlay,
+    zIndex: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.screenPaddingH,
+  },
+  transitionContent: {
+    alignItems: 'center',
+    gap: 16,
+    width: '100%',
+    maxWidth: 340,
+  },
+  forgeIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.emberLight,
+    borderWidth: 1,
+    borderColor: Colors.emberBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  forgeGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 50,
+    backgroundColor: Colors.emberGlow,
+    opacity: 0.6,
+  },
+  transitionTitle: {
+    color: Colors.textPrimary,
+    fontSize: 22,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  transitionSub: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  transitionSteps: {
+    width: '100%',
+    marginTop: 8,
+    gap: 0,
+  },
+  transitionStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  stepDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.emberBorder,
+    backgroundColor: Colors.bgCard,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepDotDone: {
+    backgroundColor: Colors.emberButton,
+    borderColor: Colors.emberButton,
+  },
+  stepDotCurrent: {
+    borderColor: Colors.ember,
+    backgroundColor: Colors.emberLight,
+  },
+  stepDotEmpty: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.textDim,
+  },
+  stepLabel: {
+    color: Colors.textDim,
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+  },
+  stepLabelActive: {
+    color: Colors.textPrimary,
+    fontWeight: '700',
+  },
+  stepLine: {
+    position: 'absolute',
+    left: 13,
+    top: 36,
+    width: 2,
+    height: 16,
+    backgroundColor: Colors.emberBorder,
+  },
+  stepLineDone: {
+    backgroundColor: Colors.ember,
   },
 });
