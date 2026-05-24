@@ -14,7 +14,7 @@ const frequencies = [
   { key: '1-2', label: '1-2 天' },
   { key: '3-4', label: '3-4 天' },
   { key: '5-6', label: '5-6 天' },
-  { key: '7',   label: '每天' },
+  { key: '7', label: '每天' },
 ] as const;
 
 export default function BasicInfoScreen({ navigation }: Props) {
@@ -24,7 +24,7 @@ export default function BasicInfoScreen({ navigation }: Props) {
   const [weight, setWeight] = useState('68');
   const [frequency, setFrequency] = useState<(typeof frequencies)[number]['key'] | null>(null);
 
-  const canContinue = gender && age && height && weight && frequency;
+  const canContinue = Boolean(gender && age && height && weight && frequency);
 
   const sanitizeDigits = useCallback((value: string, maxLength: number) => {
     return value.replace(/\D/g, '').slice(0, maxLength);
@@ -32,9 +32,8 @@ export default function BasicInfoScreen({ navigation }: Props) {
 
   return (
     <ScreenContainer>
-      <SectionHeader title="基础信息" subtitle="补全你的基础资料，后续方案会按你的身体条件生成。" />
+      <SectionHeader title="基础信息" subtitle="补全你的身体基础数据，后续分析和计划会据此生成。" />
 
-      {/* 性别 */}
       <View style={styles.field}>
         <Text style={styles.label}>性别</Text>
         <View style={styles.genderRow}>
@@ -55,7 +54,6 @@ export default function BasicInfoScreen({ navigation }: Props) {
         </View>
       </View>
 
-      {/* 身体数据 */}
       <View style={styles.field}>
         <Text style={styles.label}>身体数据</Text>
         <View style={styles.dataRow}>
@@ -63,7 +61,7 @@ export default function BasicInfoScreen({ navigation }: Props) {
             <TextInput
               style={styles.dataInput}
               value={age}
-              onChangeText={(v) => setAge(sanitizeDigits(v, 3))}
+              onChangeText={(value) => setAge(sanitizeDigits(value, 3))}
               keyboardType="number-pad"
               placeholder="--"
               placeholderTextColor={Colors.textDim}
@@ -75,7 +73,7 @@ export default function BasicInfoScreen({ navigation }: Props) {
             <TextInput
               style={styles.dataInput}
               value={height}
-              onChangeText={(v) => setHeight(sanitizeDigits(v, 3))}
+              onChangeText={(value) => setHeight(sanitizeDigits(value, 3))}
               keyboardType="number-pad"
               placeholder="--"
               placeholderTextColor={Colors.textDim}
@@ -87,7 +85,7 @@ export default function BasicInfoScreen({ navigation }: Props) {
             <TextInput
               style={styles.dataInput}
               value={weight}
-              onChangeText={(v) => setWeight(sanitizeDigits(v, 3))}
+              onChangeText={(value) => setWeight(sanitizeDigits(value, 3))}
               keyboardType="number-pad"
               placeholder="--"
               placeholderTextColor={Colors.textDim}
@@ -98,20 +96,19 @@ export default function BasicInfoScreen({ navigation }: Props) {
         </View>
       </View>
 
-      {/* 运动频率 */}
       <View style={styles.field}>
         <Text style={styles.label}>运动频率</Text>
         <View style={styles.freqRow}>
-          {frequencies.map((f) => {
-            const isActive = frequency === f.key;
+          {frequencies.map((item) => {
+            const active = frequency === item.key;
             return (
               <TouchableOpacity
-                key={f.key}
+                key={item.key}
                 activeOpacity={0.85}
-                onPress={() => setFrequency(f.key)}
-                style={[styles.freqBtn, isActive && styles.freqBtnActive]}
+                onPress={() => setFrequency(item.key)}
+                style={[styles.freqBtn, active && styles.freqBtnActive]}
               >
-                <Text style={[styles.freqText, isActive && styles.freqTextActive]}>{f.label}</Text>
+                <Text style={[styles.freqText, active && styles.freqTextActive]}>{item.label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -121,7 +118,16 @@ export default function BasicInfoScreen({ navigation }: Props) {
       <PrimaryButton
         label="继续"
         disabled={!canContinue}
-        onPress={() => navigation.navigate('GoalSelect')}
+        onPress={() =>
+          navigation.navigate('PhotoAssess', {
+            basicInfo: {
+              age: Number(age),
+              height: Number(height),
+              weight: Number(weight),
+              gender: gender as 'male' | 'female',
+            },
+          })
+        }
       />
     </ScreenContainer>
   );
@@ -134,7 +140,7 @@ const styles = StyleSheet.create({
   label: {
     color: Colors.textSecondary,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -147,14 +153,14 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: Radius.button,
     borderWidth: 1,
-    borderColor: Colors.goldBorder,
+    borderColor: Colors.emberBorder,
     backgroundColor: Colors.bgCard,
     alignItems: 'center',
     justifyContent: 'center',
   },
   genderBtnActive: {
-    borderColor: Colors.goldMuted,
-    backgroundColor: Colors.goldLight,
+    borderColor: Colors.ember,
+    backgroundColor: Colors.emberLight,
   },
   genderText: {
     color: Colors.textSecondary,
@@ -162,7 +168,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   genderTextActive: {
-    color: Colors.gold,
+    color: Colors.ember,
   },
   dataRow: {
     flexDirection: 'row',
@@ -174,7 +180,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.goldBorder,
+    borderColor: Colors.emberBorder,
     backgroundColor: Colors.bgCard,
     paddingVertical: 12,
     paddingHorizontal: 8,
@@ -182,7 +188,7 @@ const styles = StyleSheet.create({
   dataInput: {
     color: Colors.textPrimary,
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '900',
     paddingVertical: 0,
     textAlign: 'center',
     width: '100%',
@@ -190,7 +196,7 @@ const styles = StyleSheet.create({
   dataUnit: {
     color: Colors.textMuted,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 2,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -204,14 +210,14 @@ const styles = StyleSheet.create({
     minHeight: 40,
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.goldBorder,
+    borderColor: Colors.emberBorder,
     backgroundColor: Colors.bgCard,
     alignItems: 'center',
     justifyContent: 'center',
   },
   freqBtnActive: {
-    borderColor: Colors.goldMuted,
-    backgroundColor: Colors.goldLight,
+    borderColor: Colors.ember,
+    backgroundColor: Colors.emberLight,
   },
   freqText: {
     color: Colors.textSecondary,
@@ -219,6 +225,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   freqTextActive: {
-    color: Colors.gold,
+    color: Colors.ember,
   },
 });

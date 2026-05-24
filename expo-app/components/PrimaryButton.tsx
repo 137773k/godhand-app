@@ -9,9 +9,6 @@ type Props = {
   loading?: boolean;
 };
 
-/**
- * 主操作按钮 — 琥珀金填充 · 9999px全圆角药丸 · 暗底反白文字
- */
 export default function PrimaryButton({ label, onPress, disabled, loading }: Props) {
   const isBlocked = disabled || loading;
 
@@ -23,7 +20,7 @@ export default function PrimaryButton({ label, onPress, disabled, loading }: Pro
       style={[styles.base, isBlocked && styles.disabled]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={Colors.goldButtonText} />
+        <ActivityIndicator size="small" color={Colors.emberButtonText} />
       ) : (
         <Text style={styles.text}>{label}</Text>
       )}
@@ -37,15 +34,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.button,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.goldButton,
+    backgroundColor: Colors.emberButton,
   },
   disabled: {
     opacity: 0.38,
   },
   text: {
-    color: Colors.goldButtonText,
+    color: Colors.emberButtonText,
     fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    fontWeight: '900',
+    letterSpacing: 0,
   },
 });
