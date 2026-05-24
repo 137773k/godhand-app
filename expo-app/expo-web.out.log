@@ -1,0 +1,13 @@
+
+> expo-app@1.0.0 web
+> expo start --web --port 19007
+
+Starting project at C:\Users\86180\Desktop\上帝之手\expo-app
+Starting Metro Bundler
+Waiting on http://localhost:19007
+Logs for your project will appear below.
+Web .\index.ts ▓░░░░░░░░░░░░░░░  7.4% (21/77)
+Web .\index.ts ▓▓▓▓▓▓░░░░░░░░░░ 40.1% (237/380)
+Web .\index.ts ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 79.3% (716/804)
+Web Bundled 12648ms index.ts (918 modules)
+ LOG  [web] Logs will appear in the browser console

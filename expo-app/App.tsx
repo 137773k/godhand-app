@@ -47,7 +47,7 @@ export default function App() {
         <ErrorBoundary>
           <NavigationContainer theme={theme}>
             <StatusBar style="light" />
-            <Stack.Navigator initialRouteName="GoalSelect" screenOptions={screenOptions}>
+            <Stack.Navigator initialRouteName="Login" screenOptions={screenOptions}>
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="BasicInfo" component={BasicInfoScreen} />
               <Stack.Screen name="PhotoAssess" component={PhotoAssessScreen} />
