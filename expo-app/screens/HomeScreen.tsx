@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -162,6 +163,15 @@ export default function HomeScreen({ navigation }: Props) {
               {greeting}，战士
             </Text>
             <Text style={styles.heroSub}>锻造身体 · 击杀弱点</Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('BasicInfo')}
+              style={styles.reevaluateBtn}
+            >
+              <Ionicons name="body-outline" size={14} color={Colors.ember} />
+              <Text style={styles.reevaluateText}>重新评估身体数据</Text>
+              <Ionicons name="chevron-forward" size={12} color={Colors.textDim} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.statusStrip}>
@@ -342,6 +352,24 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
+    fontWeight: '700',
+  },
+  reevaluateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: Radius.button,
+    borderWidth: 1,
+    borderColor: Colors.emberBorder,
+    backgroundColor: Colors.emberLight,
+  },
+  reevaluateText: {
+    color: Colors.ember,
+    fontSize: 12,
     fontWeight: '700',
   },
   statusStrip: {
