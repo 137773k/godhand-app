@@ -1,153 +1,320 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { type NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import BackButton from '../components/BackButton';
-import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import SectionHeader from '../components/SectionHeader';
-import { Colors, Radius, Spacing } from '../theme';
+import { Colors, Radius, Spacing, emberGradient } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
+import useUserProfile from '../hooks/useUserProfile';
+import {
+  calcFull,
+  type BmrResult,
+  type DietGoal,
+} from '../utils/bmr';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Diet'>;
 
-const meals = [
-  { key: 'breakfast', title: '早餐', foods: '燕麦、鸡蛋、无糖酸奶', kcal: '480 千卡', protein: '32g' },
-  { key: 'lunch',     title: '午餐', foods: '米饭、鸡胸肉、西兰花',   kcal: '620 千卡', protein: '46g' },
-  { key: 'dinner',    title: '晚餐', foods: '土豆、牛肉、菠菜',       kcal: '410 千卡', protein: '34g' },
-  { key: 'snack',     title: '加餐', foods: '香蕉、乳清蛋白',         kcal: '170 千卡', protein: '22g' },
-] as const;
+/** 目标标签映射 */
+const goalLabels: Record<DietGoal, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  fat_loss:    { label: '减脂模式', color: '#e0613a', icon: 'flame' },
+  muscle_gain: { label: '增肌模式', color: '#5e6ad2', icon: 'barbell' },
+  maintenance:  { label: '维持模式', color: '#2ea84a', icon: 'shield-checkmark' },
+};
+
+/** 根据目标+热量生成个性化食谱 */
+function generateMeals(targetKcal: number, goal: DietGoal) {
+  const isFatLoss = goal === 'fat_loss';
+  const isMuscle = goal === 'muscle_gain';
+
+  // 按比例分配四餐
+  const breakfastKcal = Math.round(targetKcal * 0.28);
+  const lunchKcal = Math.round(targetKcal * 0.35);
+  const dinnerKcal = Math.round(targetKcal * 0.25);
+  const snackKcal = targetKcal - breakfastKcal - lunchKcal - dinnerKcal;
+
+  return [
+    {
+      key: 'breakfast',
+      title: '早餐',
+      time: '07:30',
+      kcal: breakfastKcal,
+      icon: '☀️',
+      foods: isFatLoss
+        ? '燕麦50g + 鸡蛋2个 + 无糖豆浆300ml'
+        : '全麦面包2片 + 鸡蛋3个 + 牛油果半个 + 牛奶250ml',
+      protein: isFatLoss ? '28g' : '35g',
+    },
+    {
+      key: 'lunch',
+      title: '午餐',
+      time: '12:00',
+      kcal: lunchKcal,
+      icon: '🍱',
+      foods: isFatLoss
+        ? '糙米100g + 鸡胸肉150g + 西兰花200g'
+        : '白米饭150g + 牛肉150g + 西兰花200g + 橄榄油5ml',
+      protein: isFatLoss ? '42g' : '48g',
+    },
+    {
+      key: 'dinner',
+      title: '晚餐',
+      time: '18:30',
+      kcal: dinnerKcal,
+      icon: '🌙',
+      foods: isFatLoss
+        ? '红薯150g + 虾仁120g + 菠菜200g'
+        : '土豆200g + 三文鱼150g + 芦笋150g',
+      protein: isFatLoss ? '32g' : '38g',
+    },
+    {
+      key: 'snack',
+      title: '加餐',
+      time: '15:30',
+      kcal: snackKcal,
+      icon: '🥤',
+      foods: isFatLoss
+        ? '希腊酸奶150g + 蓝莓50g'
+        : '乳清蛋白粉30g + 香蕉1根 + 坚果20g',
+      protein: isFatLoss ? '14g' : '28g',
+    },
+  ];
+}
 
 export default function DietScreen({ navigation }: Props) {
-  const [added, setAdded] = useState(false);
+  const { profile, isReady } = useUserProfile();
+  const [result, setResult] = useState<BmrResult | null>(null);
+
+  useEffect(() => {
+    if (!isReady || !profile) return;
+    const r = calcFull(profile, profile.dietGoal ?? 'maintenance');
+    setResult(r);
+  }, [isReady, profile]);
+
+  const meals = useMemo(() => {
+    if (!result) return [];
+    return generateMeals(result.targetKcal, result.goal);
+  }, [result]);
+
+  if (!isReady || !result) {
+    return (
+      <ScreenContainer>
+        <BackButton onPress={() => navigation.navigate('Home')} />
+        <View style={styles.loadWrap}>
+          <Text style={styles.loadText}>计算基础代谢中…</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  const goalCfg = goalLabels[result.goal];
+  const totalProtein = meals.reduce((sum, m) => sum + parseInt(m.protein, 10), 0);
+  const eatenKcal = Math.round(result.targetKcal * 0.65); // 演示：已吃65%
+  const progressPct = Math.min(100, Math.round((eatenKcal / result.targetKcal) * 100));
 
   return (
     <ScreenContainer>
       <BackButton onPress={() => navigation.navigate('Home')} />
-      <SectionHeader title="今日饮食" subtitle="按目标热量和蛋白质分配三餐与加餐，先看整体进度。" />
 
-      {/* 热量进度卡片 */}
-      <View style={styles.card}>
-        <View style={styles.progressTop}>
-          <Text style={styles.sectionTitle}>热量进度</Text>
-          <Text style={styles.progressText}>1680 / 2200 千卡</Text>
-        </View>
-        <View style={styles.progressTrack}>
-          <View style={styles.progressFill} />
-        </View>
-        <Text style={styles.progressHint}>已完成约 76%，剩余 520 千卡。</Text>
-      </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        <SectionHeader
+          title="饮食计划"
+          subtitle="基于你的身体数据自动计算基础代谢，制定个性化食谱。"
+        />
 
-      {/* 餐食列表 */}
-      <View style={styles.mealList}>
-        {meals.map((meal) => (
-          <View key={meal.key} style={styles.mealCard}>
-            <View style={styles.mealHead}>
-              <Text style={styles.mealTitle}>{meal.title}</Text>
-              <Ionicons name="nutrition-outline" size={18} color={Colors.gold} />
+        {/* 目标模式标签 */}
+        <View style={[styles.goalTag, { borderColor: goalCfg.color + '40' }]}>
+          <Ionicons name={goalCfg.icon} size={18} color={goalCfg.color} />
+          <Text style={[styles.goalTagText, { color: goalCfg.color }]}>{goalCfg.label}</Text>
+          <Text style={styles.goalTagKcal}>目标 {result.targetKcal} kcal/天</Text>
+        </View>
+
+        {/* BMR / TDEE 卡片 */}
+        <View style={styles.bmrCard}>
+          <Text style={styles.cardTitle}>⚡ 基础代谢分析</Text>
+          <View style={styles.bmrRow}>
+            <View style={styles.bmrItem}>
+              <Text style={styles.bmrValue}>{result.bmr}</Text>
+              <Text style={styles.bmrLabel}>基础代谢 (BMR)</Text>
+              <Text style={styles.bmrHint}>静息状态消耗</Text>
             </View>
-            <Text style={styles.mealFoods}>{meal.foods}</Text>
-            <View style={styles.mealMetaRow}>
-              <Text style={styles.mealMeta}>{meal.kcal}</Text>
-              <Text style={styles.mealMeta}>{meal.protein}</Text>
+            <View style={styles.bmrDivider} />
+            <View style={styles.bmrItem}>
+              <Text style={styles.bmrValue}>{result.tdee}</Text>
+              <Text style={styles.bmrLabel}>每日消耗 (TDEE)</Text>
+              <Text style={styles.bmrHint}>含日常活动</Text>
+            </View>
+            <View style={styles.bmrDivider} />
+            <View style={styles.bmrItem}>
+              <Text style={[styles.bmrValue, { color: goalCfg.color }]}>{result.targetKcal}</Text>
+              <Text style={styles.bmrLabel}>目标摄入</Text>
+              <Text style={styles.bmrHint}>
+                {result.goal === 'fat_loss' ? '赤字' : result.goal === 'muscle_gain' ? '盈余' : '持平'}
+                {' '}{Math.abs(result.tdee - result.targetKcal)} kcal
+              </Text>
             </View>
           </View>
-        ))}
-      </View>
+          <Text style={styles.formula}>
+            Mifflin-St Jeor 公式 • {profile?.gender === 'male' ? '男' : '女'} • {profile?.age}岁 • {profile?.heightCm}cm • {profile?.weightKg}kg
+          </Text>
+        </View>
 
-      {added ? (
-        <Text style={styles.statusText}>已打开食物添加占位流程。</Text>
-      ) : (
-        <Text style={styles.statusText}> </Text>
-      )}
+        {/* 宏量素分布 */}
+        <View style={styles.macroCard}>
+          <Text style={styles.cardTitle}>🥩 宏量素分配</Text>
+          <View style={styles.macroBars}>
+            {(['protein', 'carbs', 'fat'] as const).map((key) => {
+              const labels = { protein: '蛋白质', carbs: '碳水', fat: '脂肪' };
+              const colors = { protein: '#e0613a', carbs: '#f0a040', fat: '#e0c060' };
+              const g = result.macros[`${key}G` as const] as number;
+              const kcal = result.macros[`${key}Kcal` as const] as number;
+              const pct = Math.round((kcal / result.targetKcal) * 100);
+              return (
+                <View key={key} style={styles.macroRow}>
+                  <View style={styles.macroHead}>
+                    <Text style={styles.macroName}>{labels[key]}</Text>
+                    <Text style={styles.macroVal}>{g}g ({kcal}kcal · {pct}%)</Text>
+                  </View>
+                  <View style={styles.macroTrack}>
+                    <View style={[styles.macroFill, { width: `${pct}%`, backgroundColor: colors[key] }]} />
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
 
-      <PrimaryButton label="添加食物" onPress={() => setAdded(true)} />
+        {/* 当日热量进度 */}
+        <View style={styles.progressCard}>
+          <Text style={styles.cardTitle}>🔥 今日摄入</Text>
+          <View style={styles.progressTop}>
+            <Text style={styles.progressVal}>{eatenKcal}</Text>
+            <Text style={styles.progressTotal}>/ {result.targetKcal} kcal</Text>
+            <Text style={styles.progressPct}>{progressPct}%</Text>
+          </View>
+          <View style={styles.progressTrack}>
+            <LinearGradient
+              colors={progressPct > 90 ? ['#e0613a', '#e04830'] : emberGradient}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={[styles.progressFill, { width: `${Math.min(100, progressPct)}%` }]}
+            />
+          </View>
+          <Text style={styles.progressHint}>
+            剩余 {result.targetKcal - eatenKcal} kcal · 蛋白质已摄入 {Math.round(totalProtein * 0.65)}g / {totalProtein}g
+          </Text>
+        </View>
+
+        {/* 四餐食谱 */}
+        <Text style={styles.sectionTitle}>📋 今日食谱</Text>
+        <View style={styles.mealList}>
+          {meals.map((meal) => (
+            <View key={meal.key} style={styles.mealCard}>
+              <View style={styles.mealHead}>
+                <View style={styles.mealLeft}>
+                  <Text style={styles.mealIcon}>{meal.icon}</Text>
+                  <View>
+                    <Text style={styles.mealTitle}>{meal.title}</Text>
+                    <Text style={styles.mealTime}>{meal.time}</Text>
+                  </View>
+                </View>
+                <View style={styles.mealRight}>
+                  <Text style={styles.mealKcal}>{meal.kcal}</Text>
+                  <Text style={styles.mealKcalUnit}>kcal</Text>
+                </View>
+              </View>
+              <Text style={styles.mealFoods}>{meal.foods}</Text>
+              <View style={styles.mealMeta}>
+                <Ionicons name="nutrition" size={14} color={Colors.gold} />
+                <Text style={styles.mealProtein}>蛋白质 {meal.protein}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.bottomPad} />
+      </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Colors.goldBorder,
-    backgroundColor: Colors.bgCard,
-    padding: 16,
-    gap: Spacing.cardGap,
+  scroll: { gap: 14, paddingBottom: 40 },
+  loadWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadText: { color: Colors.textSecondary, fontSize: 14 },
+  goalTag: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    alignSelf: 'flex-start',
+    borderRadius: 999, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 8,
   },
-  progressTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.cardGap,
+  goalTagText: { fontSize: 13, fontWeight: '900' },
+  goalTagKcal: { color: Colors.textMuted, fontSize: 12, fontWeight: '700' },
+  cardTitle: {
+    color: Colors.textPrimary, fontSize: 15, fontWeight: '900', marginBottom: 12,
   },
-  sectionTitle: {
-    color: Colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
+  bmrCard: {
+    borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.emberBorder,
+    backgroundColor: Colors.bgCard, padding: 16,
   },
-  progressText: {
-    color: Colors.gold,
-    fontSize: 12,
-    fontWeight: '700',
+  bmrRow: { flexDirection: 'row', alignItems: 'center' },
+  bmrItem: { flex: 1, alignItems: 'center', gap: 2 },
+  bmrValue: { color: Colors.textPrimary, fontSize: 26, fontWeight: '900' },
+  bmrLabel: { color: Colors.textSecondary, fontSize: 11, fontWeight: '700', marginTop: 2 },
+  bmrHint: { color: Colors.textMuted, fontSize: 10 },
+  bmrDivider: { width: 1, height: 48, backgroundColor: Colors.emberBorder },
+  formula: {
+    color: Colors.textMuted, fontSize: 10, marginTop: 12, textAlign: 'center',
   },
+  macroCard: {
+    borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.emberBorder,
+    backgroundColor: Colors.bgCard, padding: 16,
+  },
+  macroBars: { gap: 10 },
+  macroRow: { gap: 4 },
+  macroHead: { flexDirection: 'row', justifyContent: 'space-between' },
+  macroName: { color: Colors.textSecondary, fontSize: 12, fontWeight: '700' },
+  macroVal: { color: Colors.textMuted, fontSize: 11, fontWeight: '600' },
+  macroTrack: {
+    height: 8, borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden',
+  },
+  macroFill: { height: '100%', borderRadius: 999 },
+  progressCard: {
+    borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.emberBorder,
+    backgroundColor: Colors.bgCard, padding: 16,
+  },
+  progressTop: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 10 },
+  progressVal: { color: Colors.textPrimary, fontSize: 32, fontWeight: '900' },
+  progressTotal: { color: Colors.textMuted, fontSize: 14, fontWeight: '700' },
+  progressPct: { color: Colors.ember, fontSize: 14, fontWeight: '900', marginLeft: 'auto' },
   progressTrack: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    overflow: 'hidden',
+    height: 12, borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden',
   },
-  progressFill: {
-    width: '76%',
-    height: '100%',
-    borderRadius: 999,
-    backgroundColor: Colors.goldButton,
+  progressFill: { height: '100%', borderRadius: 999 },
+  progressHint: { color: Colors.textMuted, fontSize: 11, marginTop: 8 },
+  sectionTitle: {
+    color: Colors.textPrimary, fontSize: 16, fontWeight: '900', marginTop: 4,
   },
-  progressHint: {
-    color: Colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  mealList: {
-    gap: Spacing.cardGap,
-  },
+  mealList: { gap: 10 },
   mealCard: {
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Colors.goldBorder,
-    backgroundColor: Colors.bgCard,
-    padding: 14,
-    gap: Spacing.inlineGap,
+    borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.goldBorder,
+    backgroundColor: Colors.bgCard, padding: 14, gap: 8,
   },
-  mealHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  mealTitle: {
-    color: Colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  mealFoods: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  mealMetaRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  mealMeta: {
-    color: Colors.gold,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  statusText: {
-    minHeight: 18,
-    color: Colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-  },
+  mealHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  mealLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  mealIcon: { fontSize: 24 },
+  mealTitle: { color: Colors.textPrimary, fontSize: 15, fontWeight: '900' },
+  mealTime: { color: Colors.textMuted, fontSize: 11 },
+  mealRight: { alignItems: 'flex-end' },
+  mealKcal: { color: Colors.gold, fontSize: 20, fontWeight: '900' },
+  mealKcalUnit: { color: Colors.textMuted, fontSize: 10 },
+  mealFoods: { color: Colors.textSecondary, fontSize: 13, lineHeight: 18 },
+  mealMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  mealProtein: { color: Colors.gold, fontSize: 12, fontWeight: '700' },
+  bottomPad: { height: 20 },
 });

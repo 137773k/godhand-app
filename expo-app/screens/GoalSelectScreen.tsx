@@ -18,6 +18,8 @@ import ScreenContainer from '../components/ScreenContainer';
 import SectionHeader from '../components/SectionHeader';
 import { Colors, Radius, Spacing, emberGradient } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
+import { loadProfile, saveProfile } from '../hooks/useUserProfile';
+import { goalToDietGoal } from '../utils/bmr';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GoalSelect'>;
 
@@ -420,15 +422,24 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
       <PrimaryButton
         label="开始蜕变计划"
         disabled={!canContinue}
-        onPress={() =>
+        onPress={async () => {
+          const existing = await loadProfile();
+          if (existing) {
+            await saveProfile({
+              ...existing,
+              goal: selectedGoal ?? '',
+              targetBodyFat: effectiveTargetBodyFat ?? 15,
+              dietGoal: goalToDietGoal(selectedGoal ?? ''),
+            });
+          }
           navigation.navigate('Home', {
             plan: {
               goal: selectedGoal ?? '',
               targetBodyFat: effectiveTargetBodyFat ?? 15,
               risks: selectedRisks,
             },
-          })
-        }
+          });
+        }}
       />
     </ScreenContainer>
   );

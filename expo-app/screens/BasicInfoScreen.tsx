@@ -7,6 +7,9 @@ import ScreenContainer from '../components/ScreenContainer';
 import SectionHeader from '../components/SectionHeader';
 import { Colors, Radius, Spacing } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
+import { saveProfile } from '../hooks/useUserProfile';
+import { freqToActivityLevel } from '../utils/bmr';
+import type { Gender } from '../utils/bmr';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BasicInfo'>;
 
@@ -118,16 +121,24 @@ export default function BasicInfoScreen({ navigation }: Props) {
       <PrimaryButton
         label="继续"
         disabled={!canContinue}
-        onPress={() =>
+        onPress={() => {
+          const g = gender as Gender;
+          saveProfile({
+            gender: g,
+            age: Number(age),
+            heightCm: Number(height),
+            weightKg: Number(weight),
+            activityLevel: freqToActivityLevel(frequency!),
+          });
           navigation.navigate('PhotoAssess', {
             basicInfo: {
               age: Number(age),
               height: Number(height),
               weight: Number(weight),
-              gender: gender as 'male' | 'female',
+              gender: g,
             },
-          })
-        }
+          });
+        }}
       />
     </ScreenContainer>
   );
