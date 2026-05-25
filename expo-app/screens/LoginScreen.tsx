@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -47,6 +48,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [loggingIn, setLoggingIn] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [toast, setToast] = useState<ToastState>({ message: '', tone: 'info', visible: false });
+  const [showTrainingModal, setShowTrainingModal] = useState(false);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sendCodeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -174,7 +176,7 @@ export default function LoginScreen({ navigation }: Props) {
     loginRef.current = setTimeout(() => {
       setLoggingIn(false);
       showToast('登录成功', 'success');
-      loginRef.current = setTimeout(() => navigation.replace('BasicInfo'), 420);
+      loginRef.current = setTimeout(() => setShowTrainingModal(true), 420);
     }, 900);
   }, [agreed, canLogin, code, navigation, phone, showToast, validateCode, validatePhone]);
 
@@ -309,6 +311,37 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal visible={showTrainingModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>训练基础</Text>
+            <Text style={styles.modalSub}>
+              在开始之前，请告诉我们你的训练经验
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => {
+                setShowTrainingModal(false);
+                navigation.replace('BasicInfo', { hasTrainingBase: true });
+              }}
+              style={[styles.modalBtn, styles.modalBtnYes]}
+            >
+              <Text style={styles.modalBtnText}>有训练基础</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => {
+                setShowTrainingModal(false);
+                navigation.replace('BasicInfo', { hasTrainingBase: false });
+              }}
+              style={[styles.modalBtn, styles.modalBtnNo]}
+            >
+              <Text style={styles.modalBtnText}>无训练基础</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -498,25 +531,75 @@ const styles = StyleSheet.create({
     color: Colors.ember,
   },
   loginBtn: {
-    minHeight: 54,
+    borderRadius: Radius.button,
+    backgroundColor: Colors.emberButton,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+  },
+  loginBtnDisabled: {
+    opacity: 0.35,
+  },
+  loginBtnText: {
+    color: Colors.emberButtonText,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  footerLink: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: Colors.bgOverlay,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCard: {
+    width: '85%',
+    maxWidth: 360,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.emberBorder,
+    backgroundColor: Colors.bgCardRaised,
+    padding: 24,
+    gap: 14,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: Colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  modalSub: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalBtn: {
+    width: '100%',
+    minHeight: 48,
     borderRadius: Radius.button,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+  },
+  modalBtnYes: {
     backgroundColor: Colors.emberButton,
+    borderColor: Colors.emberButton,
   },
-  loginBtnDisabled: {
-    opacity: 0.38,
+  modalBtnNo: {
+    backgroundColor: Colors.bgCard,
+    borderColor: Colors.emberBorder,
   },
-  loginBtnText: {
-    fontSize: 16,
-    fontWeight: '900',
+  modalBtnText: {
     color: Colors.emberButtonText,
-    letterSpacing: 0.5,
-  },
-  footerLink: {
-    ...Typography.caption,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    paddingTop: 8,
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

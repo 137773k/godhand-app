@@ -12,6 +12,9 @@ export type UserProfile = {
   targetBodyFat?: number;
   targetKcal?: number;
   dietGoal?: DietGoal;
+  trainingType?: string;
+  trainingYears?: string;
+  bmr?: number;
 };
 
 const STORAGE_KEY = 'godhand_user_profile';

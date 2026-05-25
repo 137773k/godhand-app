@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,7 @@ import MonsterBattle from '../components/MonsterBattle';
 import VictoryModal from '../components/VictoryModal';
 import XpPopup from '../components/XpPopup';
 import useGameState from '../hooks/useGameState';
+import useUserProfile from '../hooks/useUserProfile';
 import { Colors, emberGradient, Radius, Spacing, Typography } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -77,11 +79,147 @@ type PopupState = {
   y: number;
 };
 
-export default function HomeScreen({ navigation }: Props) {
+/** 目标描述映射 */
+const goalDesc: Record<string, { emoji: string; label: string }> = {
+  lean:   { emoji: '🔥', label: '精瘦减脂' },
+  line:   { emoji: '📏', label: '线条雕刻' },
+  muscle: { emoji: '💪', label: '肌肉塑形' },
+  vshape: { emoji: '🔻', label: '宽肩倒三角' },
+  glute:  { emoji: '🍑', label: '翘臀腿型' },
+  sport:  { emoji: '⚡', label: '运动表现' },
+};
+
+/** 圆形进度环组件 */
+function CircularGauge({
+  percent,
+  size,
+  strokeWidth,
+  goalLabel,
+  goalEmoji,
+  targetBodyFat,
+}: {
+  percent: number;       // 0-100
+  size: number;
+  strokeWidth: number;
+  goalLabel?: string;
+  goalEmoji?: string;
+  targetBodyFat?: number;
+}) {
+  const clamped = Math.min(100, Math.max(0, percent));
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference * (1 - clamped / 100);
+
+  // 决定颜色：低进度偏暖，高进度偏余烬橙
+  const progressColor = clamped > 70 ? '#e0613a' : clamped > 30 ? '#f0a040' : '#e0c060';
+
+  return (
+    <View style={[gaugeStyles.container, { width: size, height: size }]}>
+      {/* 背景轨道 */}
+      <View
+        style={[
+          gaugeStyles.track,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            borderWidth: strokeWidth,
+            borderColor: Colors.emberBorder,
+          },
+        ]}
+      />
+      {/* 进度弧 (使用 SVG 风格的旋转+裁剪) */}
+      <View style={gaugeStyles.arcOverlay}>
+        <View
+          style={[
+            gaugeStyles.arcFill,
+            {
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              borderWidth: strokeWidth,
+              borderColor: 'transparent',
+              borderTopColor: progressColor,
+              borderRightColor: clamped > 25 ? progressColor : 'transparent',
+              borderBottomColor: clamped > 50 ? progressColor : 'transparent',
+              borderLeftColor: clamped > 75 ? progressColor : 'transparent',
+              transform: [{ rotate: '-90deg' }],
+            },
+          ]}
+        />
+      </View>
+      {/* 中心内容 */}
+      <View style={gaugeStyles.center}>
+        <Text style={gaugeStyles.percentText}>{Math.round(clamped)}%</Text>
+        <Text style={gaugeStyles.unitText}>目标进度</Text>
+        {goalLabel && goalEmoji ? (
+          <Text style={gaugeStyles.goalText}>
+            {goalEmoji} {goalLabel}
+          </Text>
+        ) : null}
+        {targetBodyFat != null ? (
+          <Text style={gaugeStyles.targetText}>目标体脂 {targetBodyFat}%</Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+const gaugeStyles = StyleSheet.create({
+  container: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  track: {
+    position: 'absolute',
+  },
+  arcOverlay: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+    borderRadius: 9999,
+  },
+  arcFill: {
+    position: 'absolute',
+  },
+  center: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  percentText: {
+    color: Colors.textPrimary,
+    fontSize: 36,
+    fontWeight: '900',
+    lineHeight: 40,
+  },
+  unitText: {
+    color: Colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  goalText: {
+    color: Colors.ember,
+    fontSize: 14,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  targetText: {
+    color: Colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+});
+
+export default function HomeScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabKey>('Home');
   const [victoryVisible, setVictoryVisible] = useState(false);
   const [xpPopup, setXpPopup] = useState<PopupState | null>(null);
+  const [showReevalModal, setShowReevalModal] = useState(false);
   const defeatedRef = useRef(false);
   const hydratedRef = useRef(false);
 
@@ -93,6 +231,21 @@ export default function HomeScreen({ navigation }: Props) {
     completeTask,
     damageMonster,
   } = useGameState();
+
+  const { profile, isReady: profileReady } = useUserProfile();
+
+  // 计算目标进度 (基于怪兽血量)
+  const goalProgress = useMemo(() => {
+    if (!state || state.monsterMaxHP <= 0) return 0;
+    const defeated = state.monsterMaxHP - state.monsterHP;
+    return Math.round((defeated / state.monsterMaxHP) * 100);
+  }, [state?.monsterHP, state?.monsterMaxHP]);
+
+  // 目标信息
+  const goalInfo = useMemo(() => {
+    if (!profile?.goal) return null;
+    return goalDesc[profile.goal] ?? null;
+  }, [profile?.goal]);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -107,18 +260,18 @@ export default function HomeScreen({ navigation }: Props) {
   }, []);
 
   const completedCount = useMemo(
-    () => tasks.filter(task => state.completedTasks.includes(task.id)).length,
-    [state.completedTasks],
+    () => tasks.filter(task => state?.completedTasks?.includes(task.id)).length,
+    [state?.completedTasks],
   );
 
   useEffect(() => {
     if (!isReady) return;
-    if (hydratedRef.current && state.monsterDefeated && !defeatedRef.current) {
+    if (hydratedRef.current && state?.monsterDefeated && !defeatedRef.current) {
       setVictoryVisible(true);
     }
-    defeatedRef.current = state.monsterDefeated;
+    defeatedRef.current = state?.monsterDefeated ?? false;
     hydratedRef.current = true;
-  }, [isReady, state.monsterDefeated]);
+  }, [isReady, state?.monsterDefeated]);
 
   const handleTabPress = (tab: TabKey) => {
     setActiveTab(tab);
@@ -126,7 +279,7 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const handleTaskPress = (task: TaskItem, pageX: number, pageY: number) => {
-    if (state.completedTasks.includes(task.id)) return;
+    if (state?.completedTasks?.includes(task.id)) return;
 
     setXpPopup({
       visible: true,
@@ -165,13 +318,39 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.heroSub}>锻造身体 · 击杀弱点</Text>
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('BasicInfo')}
+              onPress={() => setShowReevalModal(true)}
               style={styles.reevaluateBtn}
             >
               <Ionicons name="body-outline" size={14} color={Colors.ember} />
               <Text style={styles.reevaluateText}>重新评估身体数据</Text>
               <Ionicons name="chevron-forward" size={12} color={Colors.textDim} />
             </TouchableOpacity>
+          </View>
+
+          {/* 大圆形进度仪表盘 */}
+          <View style={styles.gaugeSection}>
+            <CircularGauge
+              percent={goalProgress}
+              size={180}
+              strokeWidth={12}
+              goalLabel={goalInfo?.label}
+              goalEmoji={goalInfo?.emoji}
+              targetBodyFat={profile?.targetBodyFat}
+            />
+            <View style={styles.motivationWrap}>
+              {goalProgress < 10 ? (
+                <Text style={styles.motivationText}>征程刚刚开始，每一步都算数！</Text>
+              ) : goalProgress < 50 ? (
+                <Text style={styles.motivationText}>怪兽在退缩，继续出击！</Text>
+              ) : goalProgress < 80 ? (
+                <Text style={styles.motivationText}>胜利就在眼前，再加把劲！</Text>
+              ) : goalProgress < 100 ? (
+                <Text style={styles.motivationText}>即将击杀BOSS，坚持住！</Text>
+              ) : (
+                <Text style={styles.motivationText}>🏆 目标达成！拥抱更好的自己！</Text>
+              )}
+              <Text style={styles.motivationSub}>请坚持请加油！拥抱更好的自己！</Text>
+            </View>
           </View>
 
           <View style={styles.statusStrip}>
@@ -227,8 +406,8 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
 
           <View style={styles.taskList}>
-            {tasks.map(task => {
-              const done = state.completedTasks.includes(task.id);
+            {tasks.map((task: TaskItem) => {
+              const done = state?.completedTasks?.includes(task.id);
               return (
                 <Pressable
                   key={task.id}
@@ -263,6 +442,28 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.bottomSpacer} />
         </ScrollView>
 
+        <View pointerEvents="box-none" style={styles.fabWrap}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => {
+              if (!profileReady || !profile) return;
+              navigation.navigate('PhotoAssess', {
+                basicInfo: {
+                  age: profile.age,
+                  height: profile.heightCm,
+                  weight: profile.weightKg,
+                  gender: profile.gender,
+                },
+              });
+            }}
+            style={[styles.fab, (!profileReady || !profile) && { opacity: 0.4 }]}
+            disabled={!profileReady || !profile}
+          >
+            <Ionicons name="body-outline" size={24} color={Colors.emberButtonText} />
+            <Text style={styles.fabLabel}>体态分析</Text>
+          </TouchableOpacity>
+        </View>
+
         <View pointerEvents="box-none" style={styles.overlayLayer}>
           <XpPopup
             visible={Boolean(xpPopup?.visible)}
@@ -280,6 +481,37 @@ export default function HomeScreen({ navigation }: Props) {
           rewardGem={monster.rewardGem}
           onClose={() => setVictoryVisible(false)}
         />
+
+        {/* 重新评估确认弹窗 */}
+        <Modal visible={showReevalModal} transparent animationType="fade">
+          <View style={styles.reevalOverlay}>
+            <View style={styles.reevalCard}>
+              <Text style={styles.reevalTitle}>确认重新评估</Text>
+              <Text style={styles.reevalDesc}>
+                重新评估将覆盖你当前的体态数据（身高、体重、年龄等），已有训练记录不会丢失。
+              </Text>
+              <View style={styles.reevalBtnRow}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setShowReevalModal(false)}
+                  style={styles.reevalCancelBtn}
+                >
+                  <Text style={styles.reevalCancelText}>取消</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    setShowReevalModal(false);
+                    navigation.navigate('BasicInfo');
+                  }}
+                  style={styles.reevalConfirmBtn}
+                >
+                  <Text style={styles.reevalConfirmText}>确认重新评估</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         <View style={styles.tabBar}>
           {tabs.map(tab => {
@@ -371,6 +603,28 @@ const styles = StyleSheet.create({
     color: Colors.ember,
     fontSize: 12,
     fontWeight: '700',
+  },
+  gaugeSection: {
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 4,
+  },
+  motivationWrap: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  motivationText: {
+    color: Colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  motivationSub: {
+    color: Colors.ember,
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    opacity: 0.85,
   },
   statusStrip: {
     flexDirection: 'row',
@@ -587,5 +841,84 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: Colors.ember,
+  },
+  fabWrap: {
+    position: 'absolute',
+    right: Spacing.screenPaddingH,
+    bottom: 100,
+    alignItems: 'center',
+    zIndex: 50,
+  },
+  fab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.emberButton,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabLabel: {
+    color: Colors.emberButtonText,
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  reevalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.screenPaddingH,
+  },
+  reevalCard: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.emberBorder,
+    backgroundColor: Colors.bgCardRaised,
+    padding: 20,
+    gap: 12,
+  },
+  reevalTitle: {
+    color: Colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  reevalDesc: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  reevalBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  reevalCancelBtn: {
+    flex: 1,
+    borderRadius: Radius.button,
+    borderWidth: 1,
+    borderColor: Colors.emberBorder,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: Colors.bgCard,
+  },
+  reevalCancelText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  reevalConfirmBtn: {
+    flex: 1,
+    borderRadius: Radius.button,
+    backgroundColor: Colors.emberButton,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  reevalConfirmText: {
+    color: Colors.emberButtonText,
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

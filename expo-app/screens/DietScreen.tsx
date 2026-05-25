@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -25,12 +25,16 @@ const goalLabels: Record<DietGoal, { label: string; color: string; icon: keyof t
   maintenance:  { label: '维持模式', color: '#2ea84a', icon: 'shield-checkmark' },
 };
 
+const macroMeta: Record<string, { name: string; color: string; kcalPerG: number; icon: string }> = {
+  protein: { name: '蛋白质', color: '#e0613a', kcalPerG: 4, icon: '🥩' },
+  carbs:   { name: '碳水',   color: '#f0a040', kcalPerG: 4, icon: '🍚' },
+  fat:     { name: '脂肪',   color: '#e0c060', kcalPerG: 9, icon: '🧈' },
+};
+
 /** 根据目标+热量生成个性化食谱 */
 function generateMeals(targetKcal: number, goal: DietGoal) {
   const isFatLoss = goal === 'fat_loss';
-  const isMuscle = goal === 'muscle_gain';
 
-  // 按比例分配四餐
   const breakfastKcal = Math.round(targetKcal * 0.28);
   const lunchKcal = Math.round(targetKcal * 0.35);
   const dinnerKcal = Math.round(targetKcal * 0.25);
@@ -84,9 +88,36 @@ function generateMeals(targetKcal: number, goal: DietGoal) {
   ];
 }
 
+const STORAGE_KEY = 'diet_eaten_macros_v1';
+
+function getDateKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+type EatenMacros = { protein: number; carbs: number; fat: number; date: string };
+
 export default function DietScreen({ navigation }: Props) {
   const { profile, isReady } = useUserProfile();
   const [result, setResult] = useState<BmrResult | null>(null);
+
+  // 实际摄入追踪
+  const [eatenMacros, setEatenMacros] = useState<EatenMacros>(() => ({
+    protein: 0, carbs: 0, fat: 0, date: getDateKey(),
+  }));
+
+  // 输入框
+  const [logProtein, setLogProtein] = useState('');
+  const [logCarbs, setLogCarbs] = useState('');
+  const [logFat, setLogFat] = useState('');
+
+  // 日期重置
+  useEffect(() => {
+    const today = getDateKey();
+    if (eatenMacros.date !== today) {
+      setEatenMacros({ protein: 0, carbs: 0, fat: 0, date: today });
+    }
+  }, []);
 
   useEffect(() => {
     if (!isReady || !profile) return;
@@ -98,6 +129,33 @@ export default function DietScreen({ navigation }: Props) {
     if (!result) return [];
     return generateMeals(result.targetKcal, result.goal);
   }, [result]);
+
+  // 累计热量
+  const eatenKcal = useMemo(() => {
+    return (
+      eatenMacros.protein * 4 +
+      eatenMacros.carbs * 4 +
+      eatenMacros.fat * 9
+    );
+  }, [eatenMacros]);
+
+  // 记录食物
+  const handleLogFood = () => {
+    const p = parseFloat(logProtein) || 0;
+    const c = parseFloat(logCarbs) || 0;
+    const f = parseFloat(logFat) || 0;
+    if (p === 0 && c === 0 && f === 0) return;
+
+    setEatenMacros((prev) => ({
+      ...prev,
+      protein: prev.protein + p,
+      carbs: prev.carbs + c,
+      fat: prev.fat + f,
+    }));
+    setLogProtein('');
+    setLogCarbs('');
+    setLogFat('');
+  };
 
   if (!isReady || !result) {
     return (
@@ -112,8 +170,9 @@ export default function DietScreen({ navigation }: Props) {
 
   const goalCfg = goalLabels[result.goal];
   const totalProtein = meals.reduce((sum, m) => sum + parseInt(m.protein, 10), 0);
-  const eatenKcal = Math.round(result.targetKcal * 0.65); // 演示：已吃65%
-  const progressPct = Math.min(100, Math.round((eatenKcal / result.targetKcal) * 100));
+  const progressPct = result.targetKcal > 0
+    ? Math.min(100, Math.round((eatenKcal / result.targetKcal) * 100))
+    : 0;
 
   return (
     <ScreenContainer>
@@ -162,7 +221,7 @@ export default function DietScreen({ navigation }: Props) {
           </Text>
         </View>
 
-        {/* 宏量素分布 */}
+        {/* 宏量素分配 */}
         <View style={styles.macroCard}>
           <Text style={styles.cardTitle}>🥩 宏量素分配</Text>
           <View style={styles.macroBars}>
@@ -187,9 +246,79 @@ export default function DietScreen({ navigation }: Props) {
           </View>
         </View>
 
+        {/* 今日已摄入 —— 宏量素进度条 */}
+        <View style={styles.macroCard}>
+          <Text style={styles.cardTitle}>📊 今日已摄入</Text>
+          <View style={styles.macroBars}>
+            {(['protein', 'carbs', 'fat'] as const).map((key) => {
+              const meta = macroMeta[key];
+              const targetG = result.macros[`${key}G` as const] as number;
+              const eatenG = eatenMacros[key];
+              const pct = targetG > 0 ? Math.min(100, Math.round((eatenG / targetG) * 100)) : 0;
+              return (
+                <View key={key} style={styles.macroRow}>
+                  <View style={styles.macroHead}>
+                    <Text style={styles.macroName}>
+                      {meta.icon} {meta.name}
+                    </Text>
+                    <Text style={[styles.macroVal, { color: meta.color }]}>
+                      {eatenG}g / {targetG}g ({pct}%)
+                    </Text>
+                  </View>
+                  <View style={styles.macroTrack}>
+                    <View style={[styles.macroFill, { width: `${pct}%`, backgroundColor: meta.color }]} />
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* 食物记录输入 */}
+          <View style={styles.logSection}>
+            <Text style={styles.logTitle}>快速记录</Text>
+            <View style={styles.logRow}>
+              {(['protein', 'carbs', 'fat'] as const).map((key) => {
+                const meta = macroMeta[key];
+                const setters = {
+                  protein: setLogProtein,
+                  carbs: setLogCarbs,
+                  fat: setLogFat,
+                };
+                const values = {
+                  protein: logProtein,
+                  carbs: logCarbs,
+                  fat: logFat,
+                };
+                return (
+                  <View key={key} style={styles.logItem}>
+                    <Text style={styles.logLabel}>{meta.name.slice(0, 1)}</Text>
+                    <TextInput
+                      style={styles.logInput}
+                      value={values[key]}
+                      onChangeText={setters[key]}
+                      keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor={Colors.textDim}
+                      maxLength={4}
+                    />
+                    <Text style={styles.logUnit}>g</Text>
+                  </View>
+                );
+              })}
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={handleLogFood}
+                style={styles.logBtn}
+              >
+                <Text style={styles.logBtnText}>记录</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
         {/* 当日热量进度 */}
         <View style={styles.progressCard}>
-          <Text style={styles.cardTitle}>🔥 今日摄入</Text>
+          <Text style={styles.cardTitle}>🔥 今日摄入热量</Text>
           <View style={styles.progressTop}>
             <Text style={styles.progressVal}>{eatenKcal}</Text>
             <Text style={styles.progressTotal}>/ {result.targetKcal} kcal</Text>
@@ -204,7 +333,8 @@ export default function DietScreen({ navigation }: Props) {
             />
           </View>
           <Text style={styles.progressHint}>
-            剩余 {result.targetKcal - eatenKcal} kcal · 蛋白质已摄入 {Math.round(totalProtein * 0.65)}g / {totalProtein}g
+            剩余 {Math.max(0, result.targetKcal - eatenKcal)} kcal
+            {progressPct > 95 ? ' ⚠️ 快达标了，注意控制！' : progressPct > 80 ? ' 🔔 进度良好，保持节奏' : ''}
           </Text>
         </View>
 
@@ -283,6 +413,64 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden',
   },
   macroFill: { height: '100%', borderRadius: 999 },
+  logSection: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.emberBorder,
+    gap: 8,
+  },
+  logTitle: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  logRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: Radius.input,
+    borderWidth: 1,
+    borderColor: Colors.emberBorder,
+    backgroundColor: Colors.bgCard,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    gap: 2,
+  },
+  logLabel: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  logInput: {
+    flex: 1,
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '700',
+    paddingVertical: 4,
+    textAlign: 'center',
+  },
+  logUnit: {
+    color: Colors.textDim,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  logBtn: {
+    borderRadius: Radius.input,
+    backgroundColor: Colors.emberButton,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  logBtnText: {
+    color: Colors.emberButtonText,
+    fontSize: 12,
+    fontWeight: '800',
+  },
   progressCard: {
     borderRadius: Radius.card, borderWidth: 1, borderColor: Colors.emberBorder,
     backgroundColor: Colors.bgCard, padding: 16,
