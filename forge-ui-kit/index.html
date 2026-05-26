@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge UI Kit — React Native 液态玻璃组件库</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #171310;
+    color: #f2ece4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  .hero {
+    text-align: center;
+    padding: 60px 20px 40px;
+    background: linear-gradient(180deg, #1c1814 0%, #171310 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -30%; left: -20%;
+    width: 140%; height: 140%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(224,97,58,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border: 1px solid rgba(224,97,58,0.15);
+    border-radius: 999px;
+    color: #e0613a;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 700;
+    color: #e0613a;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+  }
+  .hero .sub {
+    font-size: 18px;
+    color: rgba(242,236,228,0.6);
+    font-weight: 400;
+  }
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  .features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 32px 0;
+  }
+  .feature-card {
+    background: rgba(31,26,21,0.8);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+  }
+  .feature-card .icon { font-size: 28px; margin-bottom: 8px; }
+  .feature-card h3 { font-size: 15px; margin-bottom: 4px; color: #e0613a; }
+  .feature-card p { font-size: 13px; color: rgba(242,236,228,0.55); }
+  
+  .preview-box {
+    background: rgba(31,26,21,0.6);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    overflow: hidden;
+    margin: 32px 0;
+  }
+  .preview-box img {
+    width: 100%;
+    display: block;
+  }
+  
+  .pricing {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 32px 0;
+  }
+  .price-card {
+    background: rgba(31,26,21,0.8);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 24px 20px;
+    text-align: center;
+    position: relative;
+  }
+  .price-card.pro {
+    border-color: rgba(224,97,58,0.25);
+    box-shadow: 0 0 30px rgba(224,97,58,0.05);
+  }
+  .price-card .pro-badge {
+    position: absolute;
+    top: -10px;
+    right: 16px;
+    background: #e0613a;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .price-card .price {
+    font-size: 36px;
+    font-weight: 700;
+    color: #e0613a;
+    margin: 12px 0 4px;
+  }
+  .price-card .price span { font-size: 16px; font-weight: 400; }
+  .price-card .desc {
+    font-size: 12px;
+    color: rgba(242,236,228,0.5);
+    margin-bottom: 16px;
+  }
+  .price-card ul {
+    list-style: none;
+    text-align: left;
+    font-size: 13px;
+    color: rgba(242,236,228,0.7);
+  }
+  .price-card ul li { padding: 4px 0; }
+  .price-card ul li::before { content: '✓ '; color: #e0613a; }
+  
+  .pay-section {
+    background: rgba(31,26,21,0.8);
+    border: 1px solid rgba(224,97,58,0.15);
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: center;
+    margin: 32px 0;
+  }
+  .pay-section h2 {
+    color: #e0613a;
+    font-size: 22px;
+    margin-bottom: 8px;
+  }
+  .pay-section .note {
+    color: rgba(242,236,228,0.5);
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+  .pay-qr {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+  .pay-qr img {
+    width: 200px;
+    height: 200px;
+    display: block;
+  }
+  .pay-hint {
+    font-size: 12px;
+    color: rgba(242,236,228,0.4);
+  }
+  
+  .footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: rgba(242,236,228,0.3);
+    font-size: 12px;
+  }
+
+  @media (max-width: 480px) {
+    .hero h1 { font-size: 32px; }
+    .features { grid-template-columns: 1fr; }
+    .pricing { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">FORGE UI KIT</div>
+  <h1>锻造炉</h1>
+  <p class="sub">React Native 液态玻璃组件库</p>
+  <p class="sub" style="font-size:14px;margin-top:8px;">iOS · Android · Web 三端通用</p>
+</div>
+
+<div class="container">
+
+  <div class="features">
+    <div class="feature-card">
+      <div class="icon">🫧</div>
+      <h3>液态玻璃卡片</h3>
+      <p>基于 expo-blur 的真·毛玻璃，不是假透明</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🔘</div>
+      <h3>9999px 药丸按钮</h3>
+      <p>全圆角设计，iOS 高级感拉满</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🎨</div>
+      <h3>完整主题系统</h3>
+      <p>9层背景 + 6级文字 + 余烬橙/暖金双色</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📐</div>
+      <h3>7级排版常量</h3>
+      <p>hero→title→body→caption→label→stat→micro</p>
+    </div>
+  </div>
+
+  <div class="preview-box">
+    <img src="assets/preview.png" alt="Forge UI Kit 预览">
+  </div>
+
+  <div class="pricing">
+    <div class="price-card">
+      <div class="price">¥29<span> / 套</span></div>
+      <div class="desc">标准版</div>
+      <ul>
+        <li>5个核心组件</li>
+        <li>完整主题系统</li>
+        <li>Demo 演示页</li>
+        <li>TypeScript 类型</li>
+        <li>个人 & 商用授权</li>
+      </ul>
+    </div>
+    <div class="price-card pro">
+      <div class="pro-badge">推荐</div>
+      <div class="price">¥79<span> / 套</span></div>
+      <div class="desc">Pro 版</div>
+      <ul>
+        <li>标准版全部内容</li>
+        <li>7只像素怪兽组件</li>
+        <li>战斗动画系统</li>
+        <li>经验值进度条</li>
+        <li>终身免费更新</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="pay-section">
+    <h2>🔑 扫码购买</h2>
+    <p class="note">微信扫码支付 · 备注邮箱 · 24h内发送源码</p>
+    <div class="pay-qr">
+      <img src="assets/pay-qr.jpg" alt="微信支付收款码">
+    </div>
+    <p class="pay-hint">📌 支付时请备注你的邮箱地址</p>
+  </div>
+
+</div>
+
+<div class="footer">
+  Made with 🔥 by Forge Studio · React Native Expo · MIT License
+</div>
+
+</body>
+</html>
