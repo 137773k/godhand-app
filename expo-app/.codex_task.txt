@@ -1,41 +1,45 @@
-修改两个文件，完成后只输出 "DONE"，不要输出任何代码或解释。
+回退所有 v9 锻造炉改动，恢复到 v8 黑金主题。
 
-## 文件1: screens/TrainingScreen.tsx
+## 改动清单（全部执行）
+1. theme.ts：恢复为 v8 黑金配色：
+```
+export const Colors = {
+  bg: '#0B0B0B',
+  bgSecondary: '#121212',
+  surface: '#171717',
+  surfaceElevated: '#1E1E1E',
+  border: '#2A2A2A',
+  textPrimary: '#F5F5F5',
+  textSecondary: '#A1A1A1',
+  textMuted: '#6B6B6B',
+  textDim: 'rgba(107,107,107,0.5)',
+  gold: '#C8A96A',
+  goldStrong: '#D6B56D',
+  goldPressed: '#A9884F',
+  goldBorder: 'rgba(200,169,106,0.12)',
+  goldLight: 'rgba(200,169,106,0.08)',
+  goldGlow: 'rgba(200,169,106,0.06)',
+  success: '#3DDC84',
+  danger: '#FF4D4D',
+  info: '#5E6AD2',
+  gradientTop: '#121212',
+  gradientBottom: '#0B0B0B',
+} as const;
 
-在现有代码基础上，新增以下功能：
+export const goldGradient = ['#C8A96A', '#A9884F'] as const;
+export const goldGradientSoft = ['#D6B56D', '#C8A96A'] as const;
+// 删除 bgGradient, emberGradient, emberGradientSoft
+```
+Typography、Spacing、Radius 保持不动。
 
-1. **加号按钮**：在 SectionHeader 下方、训练列表上方，添加一个 "+" 按钮（余烬橙主题色），点击弹出添加动作的弹窗。
+2. 全局替换：
+   - `ember` → `gold` (Colors.ember→Colors.gold, emberStrong→goldStrong, emberPressed→goldPressed, emberBorder→goldBorder, emberLight→goldLight, emberGlow→goldGlow)
+   - `emberGradient` → `goldGradient`
+   - `emberGradientSoft` → `goldGradientSoft`
+   - `bgGradient` 导入 → 删除，ScreenContainer 恢复用 `[Colors.gradientTop, Colors.gradientBottom]`
 
-2. **添加动作弹窗 (Modal)**：
-   - 半透明遮罩 + 居中卡片
-   - 三个输入框：动作名称、组数×次数（如 "4 组 x 8 次"）、动作说明
-   - "添加" 和 "取消" 按钮
-   - 添加后新动作插入列表最前面，带一个小的自定义标记（比如 "⚡自定义" 标签）
-   - 自定义动作的 id 用 `custom_${Date.now()}` 生成
+3. 运行 npx tsc --noEmit 确保零错误
 
-3. **保持现有功能不变**：勾选完成、展开描述、完成训练按钮都正常工作。
+4. 运行 npx expo export -p web --max-workers 1 构建
 
-## 文件2: screens/DietScreen.tsx
-
-在现有代码基础上，改造饮食追踪功能：
-
-1. **宏量素实际摄入追踪**：
-   - 新增 state: `eatenMacros = { protein: 0, carbs: 0, fat: 0 }` 
-   - 替换掉硬编码的 65% 演示数据
-
-2. **宏量素进度条区域**：
-   - 在原有的"宏量素分配"卡片下方新增一个"今日已摄入"卡片
-   - 显示三个进度条：蛋白质、脂肪、碳水
-   - 每个进度条显示 `已吃 g / 目标 g (占比%)`
-   - 进度条颜色：蛋白质用余烬橙 #e0613a，碳水用金色 #f0a040，脂肪用暖黄 #e0c060
-
-3. **食物记录输入区**：
-   - 在"今日摄入"卡片内，进度条下方加一个快速记录区
-   - 三个数字输入框（蛋白质g / 碳水g / 脂肪g）+ 一个"记录"按钮
-   - 点击记录后累加到 eatenMacros，输入框清空
-   - 累计热量自动计算（蛋白质×4 + 碳水×4 + 脂肪×9）
-
-4. **每日重置**：
-   - 组件挂载时检查日期，如果和上次记录日期不同，重置 eatenMacros 为 0
-
-5. **保持现有功能**：BMR分析卡片、食谱列表等全部保留不动。
+项目路径: C:\Users\86180\Desktop\上帝之手\expo-app

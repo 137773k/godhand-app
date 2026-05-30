@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 
-import { DarkTheme, NavigationContainer, type Theme } from '@react-navigation/native';
+import { type Theme, NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -21,14 +21,14 @@ import type { RootStackParamList } from './navigation/types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const theme: Theme = {
-  ...DarkTheme,
+  ...DefaultTheme,
   colors: {
-    ...DarkTheme.colors,
+    ...DefaultTheme.colors,
     background: Colors.bg,
-    card: Colors.bg,
-    border: Colors.emberBorder,
-    notification: Colors.emberButton,
-    primary: Colors.ember,
+    card: Colors.surface,
+    border: Colors.border,
+    notification: Colors.accent,
+    primary: Colors.accent,
     text: Colors.textPrimary,
   },
 };
@@ -36,8 +36,8 @@ const theme: Theme = {
 const screenOptions = {
   headerShown: false,
   contentStyle: { backgroundColor: Colors.bg },
-  animation: 'slide_from_right' as const,
-  animationDuration: 200,
+  animation: 'fade_from_bottom' as const,
+  animationDuration: 350,
 } as const;
 
 export default function App() {
@@ -46,7 +46,7 @@ export default function App() {
       <SafeAreaProvider>
         <ErrorBoundary>
           <NavigationContainer theme={theme}>
-            <StatusBar style="light" />
+            <StatusBar style="dark" />
             <Stack.Navigator initialRouteName="Login" screenOptions={screenOptions}>
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="BasicInfo" component={BasicInfoScreen} />

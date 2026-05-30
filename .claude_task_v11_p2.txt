@@ -1,0 +1,38 @@
+# v11新粗野主义 Part2 — 8个页面风格改造
+theme见: C:\Users\86180\Desktop\上帝之手\.claude_task_v11_theme.txt
+
+## 通用规则
+1. 所有 ember/gold → Colors.accent (#1F1E18 黑色)
+2. 所有 LinearGradient → 删除,用纯色 bg
+3. 卡片: cardBorder (4px黑边+硬阴影) 或 cardBorderSmall (3px)
+4. 标签: tagPill (黄底 #FFF29A 全圆角)
+5. 按钮: 用PrimaryButton,别自己写样式
+6. rgba半透明 → 实色 surface/surfaceElevated
+7. Tab选中: 黑底白字
+
+## 逐文件要点
+
+### LoginScreen
+输入框: borderWidth:3 borderColor:Colors.border bg:Colors.surface, 按钮用PrimaryButton
+
+### HomeScreen (核心,895行)
+- 进度环: stroke Colors.accent, 底色 Colors.bgSecondary
+- TabBar: bg surface, borderTop:4px border:Colors.border, shadowHard
+- Tab选中: bg accent 白字, 未选中灰
+- 怪兽卡+统计卡: cardBorder
+- 血条: 黑色填充, borderWidth:2
+
+### TrainingScreen
+动作卡片: cardBorder, 选中态: 黑底白字
+
+### DietScreen 
+进度条: borderWidth:3 borderColor:border, 填充 accent。输入框: borderWidth:3, 标签: tagPill
+
+### ProgressScreen
+卡片: cardBorder, 数字: Typography.stat
+
+### BasicInfoScreen/GoalSelectScreen/PhotoAssessScreen
+输入框统一 borderWidth:3, 选中: 黑底白字, 按钮: PrimaryButton
+
+## 验证
+npx tsc --noEmit 零错误

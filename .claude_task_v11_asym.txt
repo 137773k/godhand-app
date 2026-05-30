@@ -1,0 +1,39 @@
+# LoginScreen: 品牌名改3D英文+去掉副标题+首页MonsterBattle不对称
+
+## 1. LoginScreen.tsx — 品牌区改造
+当前位置: header 内 brand/brandSub/tagline
+
+改为:
+```
+<View style={styles.brand3D}>
+  {/* 3D阴影层 — 3层硬偏移 */}
+  <Text style={[styles.brandLayer, {top:6, left:6, color:'#D4CEBE'}]}>HAND OF GOD</Text>
+  <Text style={[styles.brandLayer, {top:4, left:4, color:'#E5DFD2'}]}>HAND OF GOD</Text>
+  <Text style={[styles.brandLayer, {top:2, left:2, color:'#F2EDE2'}]}>HAND OF GOD</Text>
+  {/* 主层 */}
+  <Text style={styles.brandTop}>HAND OF GOD</Text>
+</View>
+<Text style={styles.tagline}>把赘肉打成经验值</Text>
+```
+
+删除 brandSub ("Hand of God") 那一行。
+
+### 样式:
+- brand3D: position relative, alignItems center, marginBottom 24, height 70
+- brandLayer: position absolute, fontSize 44, fontWeight '900', letterSpacing -0.5, fontFamily 'System' (sans-serif)
+- brandTop: fontSize 44, fontWeight '900', letterSpacing -0.5, color Colors.accent, position relative, zIndex 10
+- tagline 保持原样
+
+### import 去掉未使用的 brandSub 相关样式
+
+## 2. HomeScreen MonsterBattle — 新粗野不对称（如果还没改）
+之前任务被中断了。应用以下改动到 HomeScreen.tsx:
+- bentoRow: flexDirection column (不在同一行)
+- MonsterBattle card shadow: offset (-6,6)
+- 进度环: shadow (8,8)
+- 三张 statCard: 中间 card marginTop:8
+- TabBar shadow: offset (0,-6)
+- dayBadge "战斗中"移到 name 左边做前缀
+
+## 验证
+npx tsc --noEmit 零错误

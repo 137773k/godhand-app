@@ -1,39 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import ScreenContainer from '../components/ScreenContainer';
-import MonsterBattle from '../components/MonsterBattle';
-import VictoryModal from '../components/VictoryModal';
-import XpPopup from '../components/XpPopup';
-import useGameState from '../hooks/useGameState';
 import useUserProfile from '../hooks/useUserProfile';
-import { Colors, emberGradient, Radius, Spacing, Typography } from '../theme';
+import { cardBorderSmall, Colors, Radius, Spacing, Typography } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 type TabKey = 'Home' | 'Training' | 'Diet' | 'Progress';
-
-type TaskItem = {
-  id: string;
-  xp: number;
-  icon: string;
-  iconBg: string;
-  title: string;
-  desc: string;
-  label: string;
-};
 
 const tabs: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; activeIcon: keyof typeof Ionicons.glyphMap }[] = [
   { key: 'Home', label: '首页', icon: 'home-outline', activeIcon: 'home' },
@@ -42,44 +27,6 @@ const tabs: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap; 
   { key: 'Progress', label: '数据', icon: 'trending-up-outline', activeIcon: 'trending-up' },
 ];
 
-const tasks: TaskItem[] = [
-  {
-    id: 'workout',
-    xp: 120,
-    icon: '🏋️',
-    iconBg: Colors.emberLight,
-    title: '胸 + 三头训练',
-    desc: '平板卧推 · 上斜哑铃 · 绳索下压 · 6 动作',
-    label: '16:00 · 力量',
-  },
-  {
-    id: 'lunch',
-    xp: 50,
-    icon: '🥗',
-    iconBg: 'rgba(46,168,74,0.12)',
-    title: '高蛋白午餐',
-    desc: '鸡胸肉 + 糙米 + 西兰花 · 约 580 kcal',
-    label: '午餐 · 饮食',
-  },
-  {
-    id: 'photo',
-    xp: 80,
-    icon: '📸',
-    iconBg: 'rgba(94,106,210,0.12)',
-    title: '周度体型记录',
-    desc: '正面 / 侧面 / 背面 · AI 自动标注体态',
-    label: '每周 · 记录',
-  },
-];
-
-type PopupState = {
-  visible: boolean;
-  amount: number;
-  x: number;
-  y: number;
-};
-
-/** 目标描述映射 */
 const goalDesc: Record<string, { emoji: string; label: string }> = {
   lean:   { emoji: '🔥', label: '精瘦减脂' },
   line:   { emoji: '📏', label: '线条雕刻' },
@@ -89,7 +36,20 @@ const goalDesc: Record<string, { emoji: string; label: string }> = {
   sport:  { emoji: '⚡', label: '运动表现' },
 };
 
-/** 圆形进度环组件 */
+const CK = {
+  checkin: 'checkin_v1',
+  training: 'today_training_v1',
+  diet: 'today_diet_v1',
+  weight: 'today_weight_v1',
+};
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+/* ---- CircularGauge ---- */
+
 function CircularGauge({
   percent,
   size,
@@ -98,7 +58,7 @@ function CircularGauge({
   goalEmoji,
   targetBodyFat,
 }: {
-  percent: number;       // 0-100
+  percent: number;
   size: number;
   strokeWidth: number;
   goalLabel?: string;
@@ -106,16 +66,10 @@ function CircularGauge({
   targetBodyFat?: number;
 }) {
   const clamped = Math.min(100, Math.max(0, percent));
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const dashOffset = circumference * (1 - clamped / 100);
-
-  // 决定颜色：低进度偏暖，高进度偏余烬橙
-  const progressColor = clamped > 70 ? '#e0613a' : clamped > 30 ? '#f0a040' : '#e0c060';
+  const progressColor = Colors.accent;
 
   return (
     <View style={[gaugeStyles.container, { width: size, height: size }]}>
-      {/* 背景轨道 */}
       <View
         style={[
           gaugeStyles.track,
@@ -124,11 +78,10 @@ function CircularGauge({
             height: size,
             borderRadius: size / 2,
             borderWidth: strokeWidth,
-            borderColor: Colors.emberBorder,
+            borderColor: Colors.border,
           },
         ]}
       />
-      {/* 进度弧 (使用 SVG 风格的旋转+裁剪) */}
       <View style={gaugeStyles.arcOverlay}>
         <View
           style={[
@@ -148,7 +101,6 @@ function CircularGauge({
           ]}
         />
       </View>
-      {/* 中心内容 */}
       <View style={gaugeStyles.center}>
         <Text style={gaugeStyles.percentText}>{Math.round(clamped)}%</Text>
         <Text style={gaugeStyles.unitText}>目标进度</Text>
@@ -166,82 +118,109 @@ function CircularGauge({
 }
 
 const gaugeStyles = StyleSheet.create({
-  container: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  track: {
-    position: 'absolute',
-  },
-  arcOverlay: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    overflow: 'hidden',
-    borderRadius: 9999,
-  },
-  arcFill: {
-    position: 'absolute',
-  },
-  center: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  percentText: {
-    color: Colors.textPrimary,
-    fontSize: 36,
-    fontWeight: '900',
-    lineHeight: 40,
-  },
-  unitText: {
-    color: Colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  goalText: {
-    color: Colors.ember,
-    fontSize: 14,
-    fontWeight: '900',
-    marginTop: 4,
-  },
-  targetText: {
-    color: Colors.textSecondary,
-    fontSize: 11,
-    fontWeight: '600',
-  },
+  container: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  track: { position: 'absolute' },
+  arcOverlay: { position: 'absolute', width: '100%', height: '100%', overflow: 'hidden', borderRadius: 9999 },
+  arcFill: { position: 'absolute' },
+  center: { position: 'absolute', alignItems: 'center', justifyContent: 'center', gap: 2 },
+  percentText: { color: Colors.textPrimary, fontSize: 28, fontWeight: '900', lineHeight: 32 },
+  unitText: { color: Colors.textMuted, fontSize: 10, fontWeight: '700' },
+  goalText: { color: Colors.accent, fontSize: 12, fontWeight: '900', marginTop: 2 },
+  targetText: { color: Colors.textSecondary, fontSize: 10, fontWeight: '600' },
 });
 
-export default function HomeScreen({ navigation, route }: Props) {
-  const insets = useSafeAreaInsets();
-  const [activeTab, setActiveTab] = useState<TabKey>('Home');
-  const [victoryVisible, setVictoryVisible] = useState(false);
-  const [xpPopup, setXpPopup] = useState<PopupState | null>(null);
-  const [showReevalModal, setShowReevalModal] = useState(false);
-  const defeatedRef = useRef(false);
-  const hydratedRef = useRef(false);
+/* ---- Main Screen ---- */
 
-  const {
-    state,
-    monster,
-    isReady,
-    xpProgress,
-    completeTask,
-    damageMonster,
-  } = useGameState();
+export default function HomeScreen({ navigation }: Props) {
+  const [activeTab, setActiveTab] = useState<TabKey>('Home');
+  const [showReevalModal, setShowReevalModal] = useState(false);
 
   const { profile, isReady: profileReady } = useUserProfile();
 
-  // 计算目标进度 (基于怪兽血量)
-  const goalProgress = useMemo(() => {
-    if (!state || state.monsterMaxHP <= 0) return 0;
-    const defeated = state.monsterMaxHP - state.monsterHP;
-    return Math.round((defeated / state.monsterMaxHP) * 100);
-  }, [state?.monsterHP, state?.monsterMaxHP]);
+  // ---- dashboard state ----
+  const [checkedIn, setCheckedIn] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [trainingDone, setTrainingDone] = useState(false);
+  const [dietKcal, setDietKcal] = useState(0);
+  const [dietTarget, setDietTarget] = useState(0);
+  const [weightVal, setWeightVal] = useState<number | null>(null);
 
-  // 目标信息
+  // ---- load all dashboard data ----
+  const loadDashboard = useCallback(async () => {
+    const today = todayKey();
+    try {
+      const [rawC, rawT, rawD, rawW] = await Promise.all([
+        AsyncStorage.getItem(CK.checkin),
+        AsyncStorage.getItem(CK.training),
+        AsyncStorage.getItem(CK.diet),
+        AsyncStorage.getItem(CK.weight),
+      ]);
+      // checkin
+      if (rawC) {
+        const c = JSON.parse(rawC);
+        setCheckedIn(c.date === today);
+        setStreak(c.streak ?? 0);
+      }
+      // training
+      if (rawT) {
+        const t = JSON.parse(rawT);
+        setTrainingDone(t.date === today && !!t.completed);
+      }
+      // diet
+      if (rawD) {
+        const d = JSON.parse(rawD);
+        if (d.date === today) setDietKcal(d.kcal ?? 0);
+      }
+      // weight
+      if (rawW) {
+        const w = JSON.parse(rawW);
+        if (w.date === today) setWeightVal(w.weight ?? null);
+      }
+    } catch { /* noop */ }
+  }, []);
+
+  useEffect(() => { loadDashboard(); }, [loadDashboard]);
+
+  // diet target from profile
+  useEffect(() => {
+    if (profile?.targetKcal) setDietTarget(profile.targetKcal);
+  }, [profile?.targetKcal]);
+
+  // ---- check-in ----
+  const handleCheckin = useCallback(async () => {
+    const today = todayKey();
+    try {
+      const raw = await AsyncStorage.getItem(CK.checkin);
+      let prev = raw ? JSON.parse(raw) : { date: '', streak: 0, totalDays: 0 };
+      if (prev.date === today) return;
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yk = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
+      const newStreak = prev.date === yk ? prev.streak + 1 : 1;
+      const next = { date: today, streak: newStreak, totalDays: (prev.totalDays ?? 0) + 1 };
+      await AsyncStorage.setItem(CK.checkin, JSON.stringify(next));
+      setCheckedIn(true);
+      setStreak(newStreak);
+    } catch { /* noop */ }
+  }, []);
+
+  // ---- progress computation ----
+  const progressPercent = useMemo(() => {
+    if (!profile?.targetBodyFat || !profile?.weightKg) return 0;
+    const currentWeight = weightVal ?? profile.weightKg;
+    const leanMass = currentWeight * 0.78; // rough lean estimate
+    const targetWeight = leanMass / (1 - profile.targetBodyFat / 100);
+    const startWeight = profile.weightKg;
+    if (targetWeight >= startWeight) {
+      // bulking or maintaining
+      return startWeight > 0 ? Math.min(100, Math.max(0, (currentWeight / targetWeight) * 100 * 0.5)) : 0;
+    }
+    const total = startWeight - targetWeight;
+    const lost = startWeight - currentWeight;
+    return total > 0 ? Math.min(100, Math.max(0, (lost / total) * 100)) : 0;
+  }, [profile?.targetBodyFat, profile?.weightKg, weightVal]);
+
+  // ---- computed ----
   const goalInfo = useMemo(() => {
     if (!profile?.goal) return null;
     return goalDesc[profile.goal] ?? null;
@@ -256,669 +235,304 @@ export default function HomeScreen({ navigation, route }: Props) {
 
   const dateStr = useMemo(() => {
     const now = new Date();
-    return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+    const week = ['日', '一', '二', '三', '四', '五', '六'];
+    return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${week[now.getDay()]}`;
   }, []);
-
-  const completedCount = useMemo(
-    () => tasks.filter(task => state?.completedTasks?.includes(task.id)).length,
-    [state?.completedTasks],
-  );
-
-  useEffect(() => {
-    if (!isReady) return;
-    if (hydratedRef.current && state?.monsterDefeated && !defeatedRef.current) {
-      setVictoryVisible(true);
-    }
-    defeatedRef.current = state?.monsterDefeated ?? false;
-    hydratedRef.current = true;
-  }, [isReady, state?.monsterDefeated]);
 
   const handleTabPress = (tab: TabKey) => {
     setActiveTab(tab);
     if (tab !== 'Home') navigation.navigate(tab);
   };
 
-  const handleTaskPress = (task: TaskItem, pageX: number, pageY: number) => {
-    if (state?.completedTasks?.includes(task.id)) return;
-
-    setXpPopup({
-      visible: true,
-      amount: task.xp,
-      x: pageX - Spacing.screenPaddingH,
-      y: pageY - insets.top - Spacing.screenPaddingTop,
-    });
-
-    completeTask(task.id, task.xp);
-  };
-
-  const handleMonsterAttack = (damage: number) => {
-    damageMonster(damage);
-  };
-
-  if (!isReady) {
-    return (
-      <ScreenContainer style={styles.screen} scroll={false}>
-        <View style={styles.loadingWrap}>
-          <Text style={styles.loadingTitle}>战斗档案加载中</Text>
-          <Text style={styles.loadingSub}>正在唤醒怪兽系统与本地存档</Text>
-        </View>
-      </ScreenContainer>
-    );
-  }
-
   return (
-    <ScreenContainer style={styles.screen} scroll={false}>
-      <View style={styles.root}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          <View style={styles.hero}>
-            <Text style={styles.kicker}>{dateStr}</Text>
-            <Text style={styles.heroTitle}>
-              {greeting}，战士
-            </Text>
-            <Text style={styles.heroSub}>锻造身体 · 击杀弱点</Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setShowReevalModal(true)}
-              style={styles.reevaluateBtn}
-            >
-              <Ionicons name="body-outline" size={14} color={Colors.ember} />
-              <Text style={styles.reevaluateText}>重新评估身体数据</Text>
-              <Ionicons name="chevron-forward" size={12} color={Colors.textDim} />
-            </TouchableOpacity>
+    <>
+      <ScreenContainer style={styles.screen} scroll contentStyle={styles.scrollContent}>
+        {/* 问候行 */}
+        <View style={styles.greetingRow}>
+          <View>
+            <Text style={styles.greetingText}>{greeting}，战士</Text>
+            <Text style={styles.greetingDate}>{dateStr}</Text>
           </View>
-
-          {/* 大圆形进度仪表盘 */}
-          <View style={styles.gaugeSection}>
-            <CircularGauge
-              percent={goalProgress}
-              size={180}
-              strokeWidth={12}
-              goalLabel={goalInfo?.label}
-              goalEmoji={goalInfo?.emoji}
-              targetBodyFat={profile?.targetBodyFat}
-            />
-            <View style={styles.motivationWrap}>
-              {goalProgress < 10 ? (
-                <Text style={styles.motivationText}>征程刚刚开始，每一步都算数！</Text>
-              ) : goalProgress < 50 ? (
-                <Text style={styles.motivationText}>怪兽在退缩，继续出击！</Text>
-              ) : goalProgress < 80 ? (
-                <Text style={styles.motivationText}>胜利就在眼前，再加把劲！</Text>
-              ) : goalProgress < 100 ? (
-                <Text style={styles.motivationText}>即将击杀BOSS，坚持住！</Text>
-              ) : (
-                <Text style={styles.motivationText}>🏆 目标达成！拥抱更好的自己！</Text>
-              )}
-              <Text style={styles.motivationSub}>请坚持请加油！拥抱更好的自己！</Text>
-            </View>
-          </View>
-
-          <View style={styles.statusStrip}>
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>Lv.{state.level}</Text>
-            </View>
-            <View style={styles.xpWrap}>
-              <View style={styles.xpTrack}>
-                <LinearGradient
-                  colors={emberGradient}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={[styles.xpFill, { width: `${Math.max(0, Math.min(1, xpProgress)) * 100}%` }]}
-                />
-              </View>
-              <Text style={styles.xpText}>{state.xp} / {state.xpToNext} XP</Text>
-            </View>
-          </View>
-
-          <View style={styles.monsterSection}>
-            <MonsterBattle
-              monster={monster}
-              monsterIndex={state.monsterIdx}
-              currentHP={state.monsterHP}
-              maxHP={state.monsterMaxHP}
-              defeated={state.monsterDefeated}
-              rewardXP={monster.rewardXP}
-              rewardGem={monster.rewardGem}
-              onAttack={handleMonsterAttack}
-            />
-          </View>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{state.streak}</Text>
-              <Text style={styles.statLabel}>连续天数</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{state.totalDays}</Text>
-              <Text style={styles.statLabel}>累计击败</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{state.gems}</Text>
-              <Text style={styles.statLabel}>💎 宝石</Text>
-            </View>
-          </View>
-
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>今日待战</Text>
-            <View style={styles.progressPill}>
-              <Text style={styles.progressPillText}>{completedCount}/{tasks.length}</Text>
-            </View>
-          </View>
-
-          <View style={styles.taskList}>
-            {tasks.map((task: TaskItem) => {
-              const done = state?.completedTasks?.includes(task.id);
-              return (
-                <Pressable
-                  key={task.id}
-                  onPress={event => handleTaskPress(task, event.nativeEvent.pageX, event.nativeEvent.pageY)}
-                  style={({ pressed }) => [styles.taskCard, done && styles.taskCardDone, pressed && !done && styles.taskCardPressed]}
-                >
-                  <View style={[styles.taskIcon, { backgroundColor: task.iconBg }]}>
-                    <Text style={styles.taskEmoji}>{task.icon}</Text>
-                  </View>
-                  <View style={styles.taskBody}>
-                    <Text style={styles.taskTitle}>{task.title}</Text>
-                    <Text style={styles.taskDesc}>{task.desc}</Text>
-                    <View style={styles.taskMetaRow}>
-                      <Text style={styles.taskMeta}>{task.label}</Text>
-                      <Text style={styles.taskMetaXP}>+{task.xp} XP</Text>
-                    </View>
-                  </View>
-                  <View style={styles.taskState}>
-                    {done ? (
-                      <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
-                    ) : (
-                      <View style={styles.taskXPBadge}>
-                        <Text style={styles.taskXPText}>战斗</Text>
-                      </View>
-                    )}
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
-
-        <View pointerEvents="box-none" style={styles.fabWrap}>
           <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => {
-              if (!profileReady || !profile) return;
-              navigation.navigate('PhotoAssess', {
-                basicInfo: {
-                  age: profile.age,
-                  height: profile.heightCm,
-                  weight: profile.weightKg,
-                  gender: profile.gender,
-                },
-              });
-            }}
-            style={[styles.fab, (!profileReady || !profile) && { opacity: 0.4 }]}
-            disabled={!profileReady || !profile}
+            activeOpacity={0.6}
+            onPress={() => setShowReevalModal(true)}
+            style={styles.reevalLink}
           >
-            <Ionicons name="body-outline" size={24} color={Colors.emberButtonText} />
-            <Text style={styles.fabLabel}>体态分析</Text>
+            <Text style={styles.reevalLinkText}>重新评估</Text>
+            <Ionicons name="chevron-forward" size={10} color={Colors.textMuted} />
           </TouchableOpacity>
         </View>
 
-        <View pointerEvents="box-none" style={styles.overlayLayer}>
-          <XpPopup
-            visible={Boolean(xpPopup?.visible)}
-            amount={xpPopup?.amount ?? 0}
-            x={xpPopup?.x ?? 0}
-            y={xpPopup?.y ?? 0}
-            onComplete={() => setXpPopup(null)}
+        {/* 打卡签到 */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleCheckin}
+          disabled={checkedIn}
+          style={[styles.checkinBtn, checkedIn && styles.checkinBtnDone]}
+        >
+          <Ionicons
+            name={checkedIn ? 'checkmark-circle' : 'flame'}
+            size={22}
+            color={checkedIn ? Colors.success : Colors.accent}
+          />
+          <View style={styles.checkinBody}>
+            <Text style={[styles.checkinLabel, checkedIn && styles.checkinLabelDone]}>
+              {checkedIn ? '已打卡 ✓' : '今日打卡'}
+            </Text>
+            <Text style={styles.checkinStreak}>
+              🔥 连续 {streak} 天
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* 今日概览 3 卡片 */}
+        <View style={styles.overviewRow}>
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewIcon}>🏋️</Text>
+            <Text style={styles.overviewValue}>{trainingDone ? '已完成' : '未开始'}</Text>
+            <Text style={styles.overviewLabel}>训练</Text>
+          </View>
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewIcon}>🥗</Text>
+            <Text style={styles.overviewValue}>
+              {dietTarget > 0 ? `${dietKcal}/${dietTarget}` : '--'}
+            </Text>
+            <Text style={styles.overviewLabel}>kcal</Text>
+          </View>
+          <View style={styles.overviewCard}>
+            <Text style={styles.overviewIcon}>⚖️</Text>
+            <Text style={styles.overviewValue}>
+              {weightVal != null ? `${weightVal}kg` : '未记录'}
+            </Text>
+            <Text style={styles.overviewLabel}>体重</Text>
+          </View>
+        </View>
+
+        {/* 进度环 */}
+        <View style={styles.gaugeWrap}>
+          <CircularGauge
+            percent={progressPercent}
+            size={150}
+            strokeWidth={10}
+            goalLabel={goalInfo?.label}
+            goalEmoji={goalInfo?.emoji}
+            targetBodyFat={profile?.targetBodyFat}
           />
         </View>
 
-        <VictoryModal
-          visible={victoryVisible}
-          monster={monster}
-          rewardXP={monster.rewardXP}
-          rewardGem={monster.rewardGem}
-          onClose={() => setVictoryVisible(false)}
-        />
+        {/* 快捷入口 */}
+        <Text style={styles.sectionTitle}>快捷入口</Text>
+        <View style={styles.quickRow}>
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={() => navigation.navigate('Training')}
+            style={styles.quickBtn}
+          >
+            <Ionicons name="barbell" size={20} color={Colors.accent} />
+            <Text style={styles.quickLabel}>训练计划</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={() => navigation.navigate('Diet')}
+            style={styles.quickBtn}
+          >
+            <Ionicons name="restaurant" size={20} color={Colors.accent} />
+            <Text style={styles.quickLabel}>饮食记录</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={() => navigation.navigate('Progress')}
+            style={styles.quickBtn}
+          >
+            <Ionicons name="trending-up" size={20} color={Colors.accent} />
+            <Text style={styles.quickLabel}>数据追踪</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* 重新评估确认弹窗 */}
-        <Modal visible={showReevalModal} transparent animationType="fade">
-          <View style={styles.reevalOverlay}>
-            <View style={styles.reevalCard}>
-              <Text style={styles.reevalTitle}>确认重新评估</Text>
-              <Text style={styles.reevalDesc}>
-                重新评估将覆盖你当前的体态数据（身高、体重、年龄等），已有训练记录不会丢失。
-              </Text>
-              <View style={styles.reevalBtnRow}>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => setShowReevalModal(false)}
-                  style={styles.reevalCancelBtn}
-                >
-                  <Text style={styles.reevalCancelText}>取消</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => {
-                    setShowReevalModal(false);
-                    navigation.navigate('BasicInfo');
-                  }}
-                  style={styles.reevalConfirmBtn}
-                >
-                  <Text style={styles.reevalConfirmText}>确认重新评估</Text>
-                </TouchableOpacity>
-              </View>
+        <View style={styles.bottomSpacer} />
+      </ScreenContainer>
+
+      {/* FAB - 体态分析 */}
+      <View pointerEvents="box-none" style={styles.fabWrap}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => {
+            if (!profileReady || !profile) return;
+            navigation.navigate('PhotoAssess', {
+              basicInfo: {
+                age: profile.age,
+                height: profile.heightCm,
+                weight: profile.weightKg,
+                gender: profile.gender,
+              },
+            });
+          }}
+          style={[styles.fab, (!profileReady || !profile) && { opacity: 0.4 }]}
+          disabled={!profileReady || !profile}
+        >
+          <Ionicons name="body-outline" size={24} color={Colors.bg} />
+          <Text style={styles.fabLabel}>体态分析</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* 重新评估弹窗 */}
+      <Modal visible={showReevalModal} transparent animationType="fade">
+        <View style={styles.reevalOverlay}>
+          <View style={styles.reevalCard}>
+            <Text style={styles.reevalTitle}>确认重新评估</Text>
+            <Text style={styles.reevalDesc}>
+              重新评估将覆盖你当前的体态数据（身高、体重、年龄等），已有训练记录不会丢失。
+            </Text>
+            <View style={styles.reevalBtnRow}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowReevalModal(false)}
+                style={styles.reevalCancelBtn}
+              >
+                <Text style={styles.reevalCancelText}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => {
+                  setShowReevalModal(false);
+                  navigation.navigate('BasicInfo');
+                }}
+                style={styles.reevalConfirmBtn}
+              >
+                <Text style={styles.reevalConfirmText}>确认重新评估</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-
-        <View style={styles.tabBar}>
-          {tabs.map(tab => {
-            const isActive = activeTab === tab.key;
-            return (
-              <Pressable
-                key={tab.key}
-                onPress={() => handleTabPress(tab.key)}
-                style={({ pressed }) => [styles.tabItem, pressed && styles.tabItemPressed]}
-              >
-                <Ionicons
-                  name={isActive ? tab.activeIcon : tab.icon}
-                  size={22}
-                  color={isActive ? Colors.ember : Colors.textDim}
-                />
-                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
-                {isActive ? <View style={styles.tabDot} /> : null}
-              </Pressable>
-            );
-          })}
         </View>
+      </Modal>
+
+      {/* 底部导航 */}
+      <View style={styles.tabBar}>
+        {tabs.map(tab => {
+          const isActive = activeTab === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => handleTabPress(tab.key)}
+              style={({ pressed }) => [styles.tabItem, isActive && styles.tabItemActive, pressed && styles.tabItemPressed]}
+            >
+              <Ionicons
+                name={isActive ? tab.activeIcon : tab.icon}
+                size={22}
+                color={isActive ? Colors.surface : Colors.textDim}
+              />
+              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
-    </ScreenContainer>
+    </>
   );
 }
 
+/* ---- Styles ---- */
+
 const styles = StyleSheet.create({
-  screen: {
-    paddingBottom: 0,
+  screen: { paddingBottom: 0 },
+  scrollContent: { paddingBottom: 110, gap: 18 },
+
+  /* greeting */
+  greetingRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  root: {
-    flex: 1,
-    position: 'relative',
+  greetingText: { color: Colors.textPrimary, fontSize: 22, fontWeight: '900' },
+  greetingDate: { color: Colors.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 },
+  reevalLink: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  reevalLinkText: { color: Colors.textMuted, fontSize: 11, fontWeight: '600' },
+
+  /* checkin */
+  checkinBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: Radius.card, borderWidth: 3, borderColor: Colors.border,
+    backgroundColor: Colors.surface, padding: 16,
   },
-  scrollContent: {
-    paddingBottom: 110,
-    gap: 18,
+  checkinBtnDone: {
+    borderColor: Colors.success, opacity: 0.75,
   },
-  loadingWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+  checkinBody: { flex: 1, gap: 2 },
+  checkinLabel: { color: Colors.textPrimary, fontSize: 17, fontWeight: '900' },
+  checkinLabelDone: { color: Colors.success },
+  checkinStreak: { color: Colors.textMuted, fontSize: 12, fontWeight: '700' },
+
+  /* overview cards */
+  overviewRow: { flexDirection: 'row', gap: 10 },
+  overviewCard: {
+    flex: 1, ...cardBorderSmall, padding: 14, alignItems: 'center', gap: 4,
   },
-  loadingTitle: {
-    color: Colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '900',
+  overviewIcon: { fontSize: 22 },
+  overviewValue: { color: Colors.textPrimary, fontSize: 15, fontWeight: '900' },
+  overviewLabel: { color: Colors.textMuted, fontSize: 11, fontWeight: '700' },
+
+  /* gauge */
+  gaugeWrap: { alignItems: 'center', paddingVertical: 8 },
+
+  /* quick actions */
+  sectionTitle: { color: Colors.textPrimary, fontSize: 17, fontWeight: '900' },
+  quickRow: { flexDirection: 'row', gap: 10 },
+  quickBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderRadius: Radius.button, borderWidth: 3, borderColor: Colors.border,
+    backgroundColor: Colors.surface, paddingVertical: 14,
   },
-  loadingSub: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-  },
-  hero: {
-    gap: 4,
-  },
-  kicker: {
-    ...Typography.micro,
-    color: Colors.textMuted,
-    letterSpacing: 1.6,
-  },
-  heroTitle: {
-    color: Colors.textPrimary,
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '900',
-    letterSpacing: 0,
-  },
-  heroSub: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '700',
-  },
-  reevaluateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 6,
-    marginTop: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: Radius.button,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.emberLight,
-  },
-  reevaluateText: {
-    color: Colors.ember,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  gaugeSection: {
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 4,
-  },
-  motivationWrap: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  motivationText: {
-    color: Colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  motivationSub: {
-    color: Colors.ember,
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
-    opacity: 0.85,
-  },
-  statusStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  levelBadge: {
-    minWidth: 74,
-    height: 42,
-    borderRadius: Radius.button,
-    backgroundColor: Colors.emberLight,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  levelText: {
-    color: Colors.emberButtonText,
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  xpWrap: {
-    flex: 1,
-    gap: 5,
-  },
-  xpTrack: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: Colors.bgCard,
-    overflow: 'hidden',
-  },
-  xpFill: {
-    height: '100%',
-    borderRadius: 999,
-  },
-  xpText: {
-    color: Colors.textMuted,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-  },
-  monsterSection: {
-    marginTop: 2,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    backgroundColor: Colors.bgCardRaised,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-  },
-  statValue: {
-    color: Colors.textPrimary,
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: '900',
-  },
-  statLabel: {
-    color: Colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 2,
-  },
-  sectionTitle: {
-    color: Colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  progressPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: Colors.emberLight,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-  },
-  progressPillText: {
-    color: Colors.emberButtonText,
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  taskList: {
-    gap: 10,
-  },
-  taskCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: 16,
-    padding: 14,
-    backgroundColor: Colors.bgCardRaised,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-  },
-  taskCardPressed: {
-    transform: [{ scale: 0.985 }],
-  },
-  taskCardDone: {
-    opacity: 0.72,
-    borderColor: 'rgba(46,168,74,0.22)',
-  },
-  taskIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  taskEmoji: {
-    fontSize: 24,
-  },
-  taskBody: {
-    flex: 1,
-    gap: 4,
-  },
-  taskTitle: {
-    color: Colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  taskDesc: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  taskMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  taskMeta: {
-    color: Colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  taskMetaXP: {
-    color: Colors.ember,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  taskState: {
-    width: 48,
-    alignItems: 'flex-end',
-  },
-  taskXPBadge: {
-    minWidth: 42,
-    height: 24,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 8,
-    backgroundColor: Colors.emberLight,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-  },
-  taskXPText: {
-    color: Colors.emberButtonText,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  bottomSpacer: {
-    height: 18,
-  },
-  overlayLayer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  tabBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    paddingTop: 10,
-    paddingBottom: 18,
-    paddingHorizontal: Spacing.screenPaddingH,
-    backgroundColor: 'rgba(16, 13, 10, 0.96)',
-    borderTopWidth: 1,
-    borderTopColor: Colors.emberBorder,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-    paddingVertical: 4,
-  },
-  tabItemPressed: {
-    opacity: 0.7,
-  },
-  tabLabel: {
-    ...Typography.micro,
-    color: Colors.textDim,
-    letterSpacing: 0,
-  },
-  tabLabelActive: {
-    color: Colors.ember,
-  },
-  tabDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.ember,
-  },
+  quickLabel: { color: Colors.textPrimary, fontSize: 13, fontWeight: '800' },
+
+  bottomSpacer: { height: 18 },
+
+  /* fab */
   fabWrap: {
-    position: 'absolute',
-    right: Spacing.screenPaddingH,
-    bottom: 100,
-    alignItems: 'center',
-    zIndex: 50,
+    position: 'absolute', right: Spacing.screenPaddingH, bottom: 100,
+    alignItems: 'center', zIndex: 50,
   },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.emberButton,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.accent,
+    alignItems: 'center', justifyContent: 'center',
   },
-  fabLabel: {
-    color: Colors.emberButtonText,
-    fontSize: 10,
-    fontWeight: '700',
-    marginTop: 4,
-  },
+  fabLabel: { color: Colors.bg, fontSize: 10, fontWeight: '700', marginTop: 4 },
+
+  /* reeval modal */
   reevalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.screenPaddingH,
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.screenPaddingH,
   },
   reevalCard: {
-    width: '100%',
-    maxWidth: 360,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCardRaised,
-    padding: 20,
-    gap: 12,
+    width: '100%', maxWidth: 360, borderRadius: Radius.card,
+    borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surfaceElevated,
+    padding: 20, gap: 12,
   },
-  reevalTitle: {
-    color: Colors.textPrimary,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  reevalDesc: {
-    color: Colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  reevalBtnRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
+  reevalTitle: { color: Colors.textPrimary, fontSize: 18, fontWeight: '900' },
+  reevalDesc: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19 },
+  reevalBtnRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
   reevalCancelBtn: {
-    flex: 1,
-    borderRadius: Radius.button,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    paddingVertical: 12,
-    alignItems: 'center',
-    backgroundColor: Colors.bgCard,
+    flex: 1, borderRadius: Radius.button, borderWidth: 1, borderColor: Colors.border,
+    paddingVertical: 12, alignItems: 'center', backgroundColor: Colors.surface,
   },
-  reevalCancelText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  reevalCancelText: { color: Colors.textSecondary, fontSize: 14, fontWeight: '700' },
   reevalConfirmBtn: {
-    flex: 1,
-    borderRadius: Radius.button,
-    backgroundColor: Colors.emberButton,
-    paddingVertical: 12,
-    alignItems: 'center',
+    flex: 1, borderRadius: Radius.button, backgroundColor: Colors.accent,
+    paddingVertical: 12, alignItems: 'center',
   },
-  reevalConfirmText: {
-    color: Colors.emberButtonText,
-    fontSize: 14,
-    fontWeight: '800',
+  reevalConfirmText: { color: Colors.bg, fontSize: 14, fontWeight: '800' },
+
+  /* tab bar */
+  tabBar: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    flexDirection: 'row', paddingTop: 10, paddingBottom: 18,
+    paddingHorizontal: Spacing.screenPaddingH,
+    backgroundColor: Colors.surface, borderTopWidth: 4, borderTopColor: Colors.border,
+    shadowColor: Colors.shadow, shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 1, shadowRadius: 0, elevation: 0,
   },
+  tabItem: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3,
+    paddingVertical: 6, paddingHorizontal: 8, borderRadius: Radius.button,
+  },
+  tabItemActive: { backgroundColor: Colors.accent },
+  tabItemPressed: { opacity: 0.7 },
+  tabLabel: { ...Typography.micro, color: Colors.textDim, letterSpacing: 0 },
+  tabLabelActive: { color: Colors.surface },
 });

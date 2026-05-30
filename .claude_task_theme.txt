@@ -1,0 +1,57 @@
+// v10 — 锻造炉暗棕 + 余烬橙
+// 这是 theme.ts 的完整新内容，替换原文件
+export const Colors = {
+  bg: '#151210',
+  bgSecondary: '#1a1714',
+  surface: '#1f1b17',
+  surfaceElevated: '#26211c',
+  border: '#2e2822',
+  textPrimary: '#f2ece4',
+  textSecondary: 'rgba(242,236,228,0.72)',
+  textMuted: 'rgba(242,236,228,0.48)',
+  textDim: 'rgba(242,236,228,0.28)',
+  ember: '#e0613a',
+  emberStrong: '#f06b42',
+  emberPressed: '#c0392b',
+  emberBorder: 'rgba(224,97,58,0.10)',
+  emberLight: 'rgba(224,97,58,0.14)',
+  emberGlow: 'rgba(224,97,58,0.18)',
+  success: '#3DDC84',
+  danger: '#FF4D4D',
+  info: '#5E6AD2',
+  gradientTop: '#1c1814',
+  gradientBottom: '#151210',
+} as const;
+
+export const emberGradient = ['#e0613a', '#c0392b'] as const;
+export const emberGradientSoft = ['#f06b42', '#e0613a'] as const;
+
+export const Typography = {
+  h1: { fontSize: 48, lineHeight: 52, fontWeight: '900' as const, color: Colors.textPrimary, letterSpacing: -1 },
+  h2: { fontSize: 32, lineHeight: 36, fontWeight: '800' as const, color: Colors.textPrimary, letterSpacing: -0.5 },
+  h3: { fontSize: 24, lineHeight: 28, fontWeight: '700' as const, color: Colors.textPrimary, letterSpacing: -0.3 },
+  body: { fontSize: 15, lineHeight: 22, fontWeight: '400' as const, color: Colors.textSecondary },
+  caption: { fontSize: 13, lineHeight: 18, fontWeight: '500' as const, color: Colors.textMuted },
+  micro: { fontSize: 11, lineHeight: 15, fontWeight: '500' as const, color: Colors.textMuted, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  stat: { fontSize: 36, lineHeight: 40, fontWeight: '800' as const, color: Colors.textPrimary, letterSpacing: -0.8 },
+} as const;
+
+export const Spacing = {
+  screenPaddingH: 20,
+  screenPaddingTop: 16,
+  screenPaddingBottom: 32,
+  sectionGap: 32,
+  cardGap: 16,
+  inlineGap: 12,
+  tightGap: 8,
+  microGap: 4,
+} as const;
+
+export const Radius = {
+  card: 16,
+  button: 12,
+  input: 10,
+  checkbox: 6,
+  iconBtn: 10,
+  pill: 9999,
+} as const;

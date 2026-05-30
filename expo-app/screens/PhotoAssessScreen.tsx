@@ -148,7 +148,7 @@ export default function PhotoAssessScreen({ navigation, route }: Props) {
 
         <Animated.View style={[styles.captureFrame, isAnalyzing && { opacity: frameOpacity }]}>
           <View style={styles.frameInner}>
-            <Ionicons name="scan-outline" size={36} color={Colors.ember} />
+            <Ionicons name="scan-outline" size={36} color={Colors.accent} />
             <Text style={styles.frameTitle}>{activeMeta.label} 占位框</Text>
             <Text style={styles.frameText}>后续接入相机与人体关键点识别</Text>
           </View>
@@ -164,7 +164,7 @@ export default function PhotoAssessScreen({ navigation, route }: Props) {
           <Text style={styles.analysisTitle}>分析引擎</Text>
           {isAnalyzing ? (
             <View style={styles.statusRow}>
-              <ActivityIndicator size="small" color={Colors.ember} />
+              <ActivityIndicator size="small" color={Colors.accent} />
               <Text style={styles.statusText}>分析中</Text>
             </View>
           ) : analysisDone ? (
@@ -234,15 +234,15 @@ const styles = StyleSheet.create({
     minHeight: 42,
     borderRadius: Radius.button,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.82,
   },
   tabButtonActive: {
-    borderColor: Colors.ember,
-    backgroundColor: Colors.emberLight,
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent,
     opacity: 1,
   },
   tabLabel: {
@@ -251,13 +251,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   tabLabelActive: {
-    color: Colors.ember,
+    color: Colors.surface,
   },
   captureCard: {
     borderRadius: Radius.card,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCardRaised,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceElevated,
     padding: Spacing.cardGap,
     gap: Spacing.cardGap,
   },
@@ -282,13 +282,13 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     borderRadius: Radius.pill,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.emberLight,
+    borderColor: Colors.border,
+    backgroundColor: Colors.tag,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   badgeText: {
-    color: Colors.ember,
+    color: Colors.tagText,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -296,8 +296,8 @@ const styles = StyleSheet.create({
     minHeight: 300,
     borderRadius: Radius.card,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgInput,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceElevated,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
@@ -306,12 +306,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: Radius.card,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: Colors.ember,
+    borderWidth: 3,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.emberLight,
+    backgroundColor: Colors.surface,
     gap: Spacing.tightGap,
   },
   frameTitle: {
@@ -337,8 +336,8 @@ const styles = StyleSheet.create({
   analysisCard: {
     borderRadius: Radius.card,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     padding: Spacing.cardGap,
     gap: Spacing.cardGap,
   },
@@ -360,12 +359,12 @@ const styles = StyleSheet.create({
     gap: Spacing.inlineGap,
   },
   statusText: {
-    color: Colors.ember,
+    color: Colors.accent,
     fontSize: 12,
     fontWeight: '700',
   },
   statusDone: {
-    color: Colors.ember,
+    color: Colors.accent,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -376,7 +375,7 @@ const styles = StyleSheet.create({
   },
   loadingBox: {
     borderRadius: Radius.card,
-    backgroundColor: Colors.bgCardRaised,
+    backgroundColor: Colors.surfaceElevated,
     padding: 16,
     gap: Spacing.tightGap,
   },
@@ -400,8 +399,8 @@ const styles = StyleSheet.create({
     width: '47%',
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCardRaised,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceElevated,
     padding: 14,
     gap: Spacing.microGap,
   },

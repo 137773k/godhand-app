@@ -2,7 +2,7 @@ import { Component, type ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import ScreenContainer from './ScreenContainer';
-import { Colors } from '../theme';
+import { Colors, cardBorder, shadowHard } from '../theme';
 
 type Props = {
   children: ReactNode;
@@ -14,9 +14,6 @@ type State = {
   errorMessage: string;
 };
 
-/**
- * 全局错误边界 — 捕获渲染异常，避免白屏
- */
 export default class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -37,7 +34,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <ScreenContainer scroll={false}>
           <View style={styles.center}>
-            <Text style={styles.icon}>⚠</Text>
+            <Text style={styles.icon}>!</Text>
             <Text style={styles.title}>出了点问题</Text>
             <Text style={styles.message}>{this.state.errorMessage}</Text>
             <TouchableOpacity activeOpacity={0.8} onPress={this.handleRetry} style={styles.retryButton}>
@@ -62,6 +59,8 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: 48,
+    fontWeight: '900',
+    color: Colors.danger,
   },
   title: {
     color: Colors.textPrimary,
@@ -78,15 +77,16 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: 8,
     paddingHorizontal: 28,
-    paddingVertical: 10,
+    paddingVertical: 14,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.goldLight,
-    backgroundColor: Colors.goldButton,
+    borderWidth: 4,
+    borderColor: Colors.border,
+    backgroundColor: Colors.accent,
+    ...shadowHard,
   },
   retryText: {
-    color: Colors.goldButtonText,
-    fontSize: 13,
+    color: '#FFFDF6',
+    fontSize: 15,
     fontWeight: '800',
   },
 });

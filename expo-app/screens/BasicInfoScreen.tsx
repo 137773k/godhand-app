@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { type NativeStackScreenProps } from '@react-navigation/native-stack';
 
+import BackButton from '../components/BackButton';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import SectionHeader from '../components/SectionHeader';
@@ -36,14 +37,9 @@ const trainingYearsOptions: { key: TrainingYears; label: string }[] = [
   { key: 'gt3y', label: '3年以上' },
 ];
 
-const yearsLabelMap: Record<string, string> = {
-  'lt6m': '半年以内',
-  '1-3y': '1-3年',
-  'gt3y': '3年以上',
-};
-
 export default function BasicInfoScreen({ navigation, route }: Props) {
   const hasTrainingBase = route.params?.hasTrainingBase;
+  const [step, setStep] = useState(1);
 
   const [gender, setGender] = useState<'male' | 'female' | null>(null);
   const [age, setAge] = useState('18');
@@ -55,9 +51,11 @@ export default function BasicInfoScreen({ navigation, route }: Props) {
   );
   const [trainingYears, setTrainingYears] = useState<TrainingYears>(null);
 
+  const step1Done = Boolean(gender && age && height && weight);
+
   const canContinue = Boolean(
-    gender && age && height && weight && frequency && trainingType &&
-    (trainingType === 'none' || trainingYears),
+    gender && age && height && weight && trainingType &&
+    (trainingType === 'none' || (frequency && trainingYears)),
   );
 
   const bmr = useMemo(() => {
@@ -77,144 +75,190 @@ export default function BasicInfoScreen({ navigation, route }: Props) {
   }, []);
 
   const showYears = trainingType !== 'none' && trainingType !== null;
+  const showFreq = trainingType !== 'none';
+  const btnLabel = step === 1 ? '下一步：训练背景' : '下一步：选择目标';
+  const btnDisabled = step === 1 ? !step1Done : !canContinue;
+
+  const handleNext = () => {
+    if (step === 1 && step1Done) {
+      setStep(2);
+    }
+  };
 
   return (
     <ScreenContainer>
+      <BackButton onPress={() => navigation.goBack()} />
       <SectionHeader title="基础信息" subtitle="补全你的身体基础数据，后续分析和计划会据此生成。" />
 
-      <View style={styles.field}>
-        <Text style={styles.label}>性别</Text>
-        <View style={styles.genderRow}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => setGender('male')}
-            style={[styles.genderBtn, gender === 'male' && styles.genderBtnActive]}
-          >
-            <Text style={[styles.genderText, gender === 'male' && styles.genderTextActive]}>男</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={() => setGender('female')}
-            style={[styles.genderBtn, gender === 'female' && styles.genderBtnActive]}
-          >
-            <Text style={[styles.genderText, gender === 'female' && styles.genderTextActive]}>女</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Step progress bar */}
+      <View style={styles.stepBar}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => setStep(1)}
+          style={styles.stepItem}
+        >
+          <View style={[styles.stepDot, step >= 1 && styles.stepDotActive]} />
+          <Text style={[styles.stepLabel, step >= 1 && styles.stepLabelActive]}>身体数据</Text>
+        </TouchableOpacity>
+        <View style={[styles.stepLine, step >= 2 && styles.stepLineActive]} />
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => { if (step1Done) setStep(2); }}
+          style={styles.stepItem}
+        >
+          <View style={[styles.stepDot, step >= 2 && styles.stepDotActive]} />
+          <Text style={[styles.stepLabel, step >= 2 && styles.stepLabelActive]}>训练背景</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>身体数据</Text>
-        <View style={styles.dataRow}>
-          <View style={styles.dataItem}>
-            <TextInput
-              style={styles.dataInput}
-              value={age}
-              onChangeText={(value) => setAge(sanitizeDigits(value, 3))}
-              keyboardType="number-pad"
-              placeholder="--"
-              placeholderTextColor={Colors.textDim}
-              maxLength={3}
-            />
-            <Text style={styles.dataUnit}>岁</Text>
-          </View>
-          <View style={styles.dataItem}>
-            <TextInput
-              style={styles.dataInput}
-              value={height}
-              onChangeText={(value) => setHeight(sanitizeDigits(value, 3))}
-              keyboardType="number-pad"
-              placeholder="--"
-              placeholderTextColor={Colors.textDim}
-              maxLength={3}
-            />
-            <Text style={styles.dataUnit}>cm</Text>
-          </View>
-          <View style={styles.dataItem}>
-            <TextInput
-              style={styles.dataInput}
-              value={weight}
-              onChangeText={(value) => setWeight(sanitizeDigits(value, 3))}
-              keyboardType="number-pad"
-              placeholder="--"
-              placeholderTextColor={Colors.textDim}
-              maxLength={3}
-            />
-            <Text style={styles.dataUnit}>kg</Text>
-          </View>
-        </View>
-        {bmr != null ? (
-          <Text style={styles.bmrText}>基础代谢率 (BMR): {bmr} kcal/天</Text>
-        ) : null}
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>训练基础</Text>
-        <View style={styles.trainingGrid}>
-          {trainingTypes.map((item) => {
-            const active = trainingType === item.key;
-            return (
+      {step === 1 ? (
+        <>
+          <View style={styles.field}>
+            <Text style={styles.label}>性别</Text>
+            <View style={styles.genderRow}>
               <TouchableOpacity
-                key={item.key ?? 'none-key'}
                 activeOpacity={0.85}
-                onPress={() => {
-                  setTrainingType(item.key);
-                  if (item.key === 'none') setTrainingYears(null);
-                }}
-                style={[styles.trainingBtn, active && styles.trainingBtnActive]}
+                onPress={() => setGender('male')}
+                style={[styles.genderBtn, gender === 'male' && styles.genderBtnActive]}
               >
-                <Text style={styles.trainingEmoji}>{item.emoji}</Text>
-                <Text style={[styles.trainingLabel, active && styles.trainingLabelActive]}>
-                  {item.label}
-                </Text>
+                <Text style={[styles.genderText, gender === 'male' && styles.genderTextActive]}>男</Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {showYears ? (
-          <View style={styles.yearsRow}>
-            {trainingYearsOptions.map((opt) => {
-              const active = trainingYears === opt.key;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  activeOpacity={0.85}
-                  onPress={() => setTrainingYears(opt.key)}
-                  style={[styles.yearsBtn, active && styles.yearsBtnActive]}
-                >
-                  <Text style={[styles.yearsText, active && styles.yearsTextActive]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ) : null}
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>运动频率</Text>
-        <View style={styles.freqRow}>
-          {frequencies.map((item) => {
-            const active = frequency === item.key;
-            return (
               <TouchableOpacity
-                key={item.key}
                 activeOpacity={0.85}
-                onPress={() => setFrequency(item.key)}
-                style={[styles.freqBtn, active && styles.freqBtnActive]}
+                onPress={() => setGender('female')}
+                style={[styles.genderBtn, gender === 'female' && styles.genderBtnActive]}
               >
-                <Text style={[styles.freqText, active && styles.freqTextActive]}>{item.label}</Text>
+                <Text style={[styles.genderText, gender === 'female' && styles.genderTextActive]}>女</Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+            </View>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>身体数据</Text>
+            <View style={styles.dataRow}>
+              <View style={styles.dataItem}>
+                <TextInput
+                  style={styles.dataInput}
+                  value={age}
+                  onChangeText={(value) => setAge(sanitizeDigits(value, 3))}
+                  keyboardType="number-pad"
+                  placeholder="--"
+                  placeholderTextColor={Colors.textDim}
+                  maxLength={3}
+                />
+                <Text style={styles.dataUnit}>岁</Text>
+              </View>
+              <View style={styles.dataItem}>
+                <TextInput
+                  style={styles.dataInput}
+                  value={height}
+                  onChangeText={(value) => setHeight(sanitizeDigits(value, 3))}
+                  keyboardType="number-pad"
+                  placeholder="--"
+                  placeholderTextColor={Colors.textDim}
+                  maxLength={3}
+                />
+                <Text style={styles.dataUnit}>cm</Text>
+              </View>
+              <View style={styles.dataItem}>
+                <TextInput
+                  style={styles.dataInput}
+                  value={weight}
+                  onChangeText={(value) => setWeight(sanitizeDigits(value, 3))}
+                  keyboardType="number-pad"
+                  placeholder="--"
+                  placeholderTextColor={Colors.textDim}
+                  maxLength={3}
+                />
+                <Text style={styles.dataUnit}>kg</Text>
+              </View>
+            </View>
+            {bmr != null ? (
+              <Text style={styles.bmrText}>基础代谢率 (BMR): {bmr} kcal/天</Text>
+            ) : null}
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.field}>
+            <Text style={styles.label}>训练基础</Text>
+            <View style={styles.trainingGrid}>
+              {trainingTypes.map((item) => {
+                const active = trainingType === item.key;
+                return (
+                  <TouchableOpacity
+                    key={item.key ?? 'none-key'}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      setTrainingType(item.key);
+                      if (item.key === 'none') {
+                        setTrainingYears(null);
+                        setFrequency(null);
+                      }
+                    }}
+                    style={[styles.trainingBtn, active && styles.trainingBtnActive]}
+                  >
+                    <Text style={styles.trainingEmoji}>{item.emoji}</Text>
+                    <Text style={[styles.trainingLabel, active && styles.trainingLabelActive]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {showYears ? (
+              <View style={styles.yearsRow}>
+                {trainingYearsOptions.map((opt) => {
+                  const active = trainingYears === opt.key;
+                  return (
+                    <TouchableOpacity
+                      key={opt.key}
+                      activeOpacity={0.85}
+                      onPress={() => setTrainingYears(opt.key)}
+                      style={[styles.yearsBtn, active && styles.yearsBtnActive]}
+                    >
+                      <Text style={[styles.yearsText, active && styles.yearsTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : null}
+          </View>
+
+          {showFreq ? (
+          <View style={styles.field}>
+            <Text style={styles.label}>运动频率</Text>
+            <View style={styles.freqRow}>
+              {frequencies.map((item) => {
+                const active = frequency === item.key;
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    activeOpacity={0.85}
+                    onPress={() => setFrequency(item.key)}
+                    style={[styles.freqBtn, active && styles.freqBtnActive]}
+                  >
+                    <Text style={[styles.freqText, active && styles.freqTextActive]}>{item.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+          ) : null}
+        </>
+      )}
 
       <PrimaryButton
-        label="继续"
-        disabled={!canContinue}
+        label={btnLabel}
+        disabled={btnDisabled}
         onPress={async () => {
+          if (step === 1) {
+            handleNext();
+            return;
+          }
           try {
             const g = gender as Gender;
             await saveProfile({
@@ -222,7 +266,7 @@ export default function BasicInfoScreen({ navigation, route }: Props) {
               age: Number(age),
               heightCm: Number(height),
               weightKg: Number(weight),
-              activityLevel: freqToActivityLevel(frequency!),
+              activityLevel: freqToActivityLevel(frequency ?? 'sedentary'),
               trainingType: trainingType ?? undefined,
               trainingYears: trainingYears ?? undefined,
               bmr: bmr ?? undefined,
@@ -230,7 +274,7 @@ export default function BasicInfoScreen({ navigation, route }: Props) {
           } catch (e) {
             console.error('saveProfile error:', e);
           }
-          navigation.replace('GoalSelect');
+          navigation.navigate('GoalSelect');
         }}
       />
     </ScreenContainer>
@@ -238,6 +282,47 @@ export default function BasicInfoScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
+  stepBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 0,
+    marginBottom: 8,
+  },
+  stepItem: {
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+  },
+  stepDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: Colors.surface,
+    borderWidth: 2,
+    borderColor: Colors.border,
+  },
+  stepDotActive: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  stepLabel: {
+    color: Colors.textDim,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  stepLabelActive: {
+    color: Colors.accent,
+  },
+  stepLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: Colors.border,
+    maxWidth: 60,
+  },
+  stepLineActive: {
+    backgroundColor: Colors.accent,
+  },
   field: {
     gap: Spacing.inlineGap,
   },
@@ -257,14 +342,14 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: Radius.button,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   genderBtnActive: {
-    borderColor: Colors.ember,
-    backgroundColor: Colors.emberLight,
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent,
   },
   genderText: {
     color: Colors.textSecondary,
@@ -272,7 +357,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   genderTextActive: {
-    color: Colors.ember,
+    color: Colors.surface,
   },
   dataRow: {
     flexDirection: 'row',
@@ -283,9 +368,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: Radius.input,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderWidth: 3,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     paddingVertical: 12,
     paddingHorizontal: 8,
   },
@@ -322,8 +407,8 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -331,8 +416,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   trainingBtnActive: {
-    borderColor: Colors.ember,
-    backgroundColor: Colors.emberLight,
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent,
   },
   trainingEmoji: {
     fontSize: 18,
@@ -343,7 +428,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   trainingLabelActive: {
-    color: Colors.ember,
+    color: Colors.surface,
   },
   yearsRow: {
     flexDirection: 'row',
@@ -355,14 +440,14 @@ const styles = StyleSheet.create({
     minHeight: 36,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   yearsBtnActive: {
-    borderColor: Colors.ember,
-    backgroundColor: Colors.emberLight,
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent,
   },
   yearsText: {
     color: Colors.textSecondary,
@@ -370,7 +455,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   yearsTextActive: {
-    color: Colors.ember,
+    color: Colors.surface,
   },
   freqRow: {
     flexDirection: 'row',
@@ -381,14 +466,14 @@ const styles = StyleSheet.create({
     minHeight: 40,
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   freqBtnActive: {
-    borderColor: Colors.ember,
-    backgroundColor: Colors.emberLight,
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent,
   },
   freqText: {
     color: Colors.textSecondary,
@@ -396,6 +481,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   freqTextActive: {
-    color: Colors.ember,
+    color: Colors.surface,
   },
 });

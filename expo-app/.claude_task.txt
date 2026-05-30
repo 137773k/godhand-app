@@ -1,0 +1,53 @@
+# 任务：回退 v9 锻造炉主题 → v8 黑金主题
+
+把所有 ember 颜色还原为 gold，把 bgGradient 三段渐变还原为两段渐变。
+
+## 要改的文件和内容：
+
+### 1. theme.ts — 完整替换为：
+```typescript
+export const Colors = {
+  bg: '#0B0B0B',
+  bgSecondary: '#121212',
+  surface: '#171717',
+  surfaceElevated: '#1E1E1E',
+  border: '#2A2A2A',
+  textPrimary: '#F5F5F5',
+  textSecondary: '#A1A1A1',
+  textMuted: '#6B6B6B',
+  textDim: 'rgba(107,107,107,0.5)',
+  gold: '#C8A96A',
+  goldStrong: '#D6B56D',
+  goldPressed: '#A9884F',
+  goldBorder: 'rgba(200,169,106,0.12)',
+  goldLight: 'rgba(200,169,106,0.08)',
+  goldGlow: 'rgba(200,169,106,0.06)',
+  success: '#3DDC84',
+  danger: '#FF4D4D',
+  info: '#5E6AD2',
+  gradientTop: '#121212',
+  gradientBottom: '#0B0B0B',
+} as const;
+
+export const goldGradient = ['#C8A96A', '#A9884F'] as const;
+export const goldGradientSoft = ['#D6B56D', '#C8A96A'] as const;
+// 删除 emberGradient, emberGradientSoft, bgGradient
+```
+
+Typography, Spacing, Radius 不改。
+
+### 2. 全局替换（所有 .tsx 文件）：
+- `Colors.ember` → `Colors.gold`
+- `Colors.emberStrong` → `Colors.goldStrong`  
+- `Colors.emberPressed` → `Colors.goldPressed`
+- `Colors.emberBorder` → `Colors.goldBorder`
+- `Colors.emberLight` → `Colors.goldLight`
+- `Colors.emberGlow` → `Colors.goldGlow`
+- `emberGradient` → `goldGradient`
+- `emberGradientSoft` → `goldGradientSoft`
+- `import { ..., bgGradient } from '../theme'` → 删除 bgGradient 导入
+- ScreenContainer 中 `colors={bgGradient}` → `colors={[Colors.gradientTop, Colors.gradientBottom]}`
+
+### 3. 运行 `npx tsc --noEmit` 检查
+
+项目: C:\Users\86180\Desktop\上帝之手\expo-app

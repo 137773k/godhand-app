@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   LayoutChangeEvent,
   PanResponder,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -9,14 +10,12 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { type NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import PixelMonster from '../components/PixelMonster';
 import PrimaryButton from '../components/PrimaryButton';
 import ScreenContainer from '../components/ScreenContainer';
 import SectionHeader from '../components/SectionHeader';
-import { Colors, Radius, Spacing, emberGradient } from '../theme';
+import { cardBorder, cardBorderSmall, Colors, Radius, Spacing } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 import { loadProfile, saveProfile } from '../hooks/useUserProfile';
 import { goalToDietGoal } from '../utils/bmr';
@@ -25,7 +24,7 @@ import type { Gender } from '../utils/bmr';
 type Props = NativeStackScreenProps<RootStackParamList, 'GoalSelect'>;
 
 type GoalType = 'fat_loss' | 'muscle_gain' | 'performance';
-type GoalKey = 'lean' | 'muscle' | 'line' | 'vshape' | 'glute' | 'sport';
+type GoalKey = 'lean' | 'muscle' | 'line' | 'vshape' | 'glute' | 'sport' | 'hourglass' | 'slimlegs';
 type RiskKey = 'joint' | 'back' | 'heart' | 'surgery' | 'pregnancy' | 'other';
 
 type GoalConfig = {
@@ -36,15 +35,90 @@ type GoalConfig = {
   monsterHint: string;
   baseBodyFat: number;
   goalType: GoalType;
+  gender?: Gender | 'any';
 };
 
 const allGoals: GoalConfig[] = [
-  { key: 'lean', title: '精瘦型', description: '优先减脂，建立轻盈感和清晰轮廓。', monsterEmoji: '😈', monsterHint: '偷懒恶魔', baseBodyFat: 18, goalType: 'fat_loss' },
-  { key: 'line', title: '线条型', description: '收紧腰腹与四肢，让线条更明显。', monsterEmoji: '🐗', monsterHint: '赘肉野猪', baseBodyFat: 20, goalType: 'fat_loss' },
-  { key: 'muscle', title: '肌肉型', description: '增肌塑形，强化胸背肩与整体厚度。', monsterEmoji: '🐉', monsterHint: '脂肪龙', baseBodyFat: 16, goalType: 'muscle_gain' },
-  { key: 'vshape', title: '宽肩倒三角', description: '扩大上半身视觉比例，压低体脂。', monsterEmoji: '🦖', monsterHint: '暴食暴龙', baseBodyFat: 15, goalType: 'muscle_gain' },
-  { key: 'glute', title: '翘臀腿型', description: '聚焦臀腿塑形，同时控制体脂率。', monsterEmoji: '🐗', monsterHint: '赘肉野猪', baseBodyFat: 21, goalType: 'muscle_gain' },
-  { key: 'sport', title: '运动表现型', description: '兼顾爆发、耐力与功能性力量。', monsterEmoji: '👹', monsterHint: '肥胖巨魔', baseBodyFat: 17, goalType: 'performance' },
+  {
+    key: 'lean',
+    title: '精瘦型',
+    description: '优先减脂，建立轻盈感和清晰轮廓。',
+    monsterEmoji: '😈',
+    monsterHint: '偷懒恶魔',
+    baseBodyFat: 18,
+    goalType: 'fat_loss',
+    gender: 'male',
+  },
+  {
+    key: 'muscle',
+    title: '肌肉型',
+    description: '增肌塑形，强化胸背肩与整体厚度。',
+    monsterEmoji: '🐉',
+    monsterHint: '脂肪龙',
+    baseBodyFat: 16,
+    goalType: 'muscle_gain',
+    gender: 'male',
+  },
+  {
+    key: 'vshape',
+    title: '宽肩倒三角',
+    description: '扩大上半身视觉比例，压低体脂。',
+    monsterEmoji: '🦖',
+    monsterHint: '暴食暴龙',
+    baseBodyFat: 15,
+    goalType: 'muscle_gain',
+    gender: 'male',
+  },
+  {
+    key: 'sport',
+    title: '运动表现型',
+    description: '兼顾爆发、耐力与功能性力量。',
+    monsterEmoji: '👹',
+    monsterHint: '肥胖巨魔',
+    baseBodyFat: 17,
+    goalType: 'performance',
+    gender: 'male',
+  },
+  {
+    key: 'line',
+    title: '纤细苗条型',
+    description: '全身减脂塑形，打造轻盈线条感',
+    monsterEmoji: '🐗',
+    monsterHint: '赘肉野猪',
+    baseBodyFat: 21,
+    goalType: 'fat_loss',
+    gender: 'female',
+  },
+  {
+    key: 'hourglass',
+    title: '沙漏型',
+    description: '细腰丰臀，打造S曲线身材',
+    monsterEmoji: '🐉',
+    monsterHint: '赘肉野猪',
+    baseBodyFat: 22,
+    goalType: 'muscle_gain',
+    gender: 'female',
+  },
+  {
+    key: 'slimlegs',
+    title: '纤细腿型',
+    description: '瘦腿提臀，修长腿部线条',
+    monsterEmoji: '👩',
+    monsterHint: '偷懒恶魔',
+    baseBodyFat: 20,
+    goalType: 'fat_loss',
+    gender: 'female',
+  },
+  {
+    key: 'glute',
+    title: '翘臀型',
+    description: '聚焦臀部塑形，打造蜜桃臀',
+    monsterEmoji: '🐉',
+    monsterHint: '赘肉野猪',
+    baseBodyFat: 21,
+    goalType: 'muscle_gain',
+    gender: 'female',
+  },
 ];
 
 const goalTypeLabels: { key: GoalType; label: string; icon: string }[] = [
@@ -134,12 +208,7 @@ function BodyFatSlider({
       </View>
       <View style={styles.sliderTrack} onLayout={handleLayout} {...panResponder.panHandlers}>
         <View style={styles.sliderTrackBase} />
-        <LinearGradient
-          colors={[...emberGradient]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={[styles.sliderFill, { width: `${progress * 100}%` }]}
-        />
+        <View style={[styles.sliderFill, { width: `${progress * 100}%` }]} />
         <View style={[styles.sliderThumb, { left: `${progress * 100}%` }]} />
       </View>
     </View>
@@ -199,8 +268,17 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
 
   const currentBodyFat = navyBF ?? 28;
   const filteredGoals = useMemo(
-    () => (goalType ? allGoals.filter((g) => g.goalType === goalType) : []),
-    [goalType],
+    () =>
+      goalType
+        ? allGoals.filter((g) => {
+            if (g.goalType !== goalType) return false;
+            if (g.gender && g.gender !== 'any') {
+              return g.gender === profileGender;
+            }
+            return true;
+          })
+        : [],
+    [goalType, profileGender],
   );
 
   const [selectedRisks, setSelectedRisks] = useState<RiskKey[]>([]);
@@ -267,6 +345,10 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
         title="选择你的目标身材"
         subtitle="通过海军公式精确测量体脂，汇总成一套专属蜕变计划。"
       />
+
+      <Text style={styles.genderLine}>
+        {profileGender === 'female' ? '👩 女生' : '👨 男生'}
+      </Text>
 
       {/* Navy 公式输入 */}
       <View style={styles.statsCard}>
@@ -348,7 +430,9 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
 
       {/* 目标方向选择 */}
       <View style={styles.sectionBlock}>
-        <Text style={styles.blockTitle}>你的目标方向</Text>
+        <Text style={styles.blockTitle}>
+          你的目标方向 {profileGender === 'female' ? '👩 女生' : '👨 男生'}
+        </Text>
         <View style={styles.goalTypeRow}>
           {goalTypeLabels.map((gt) => {
             const active = goalType === gt.key;
@@ -375,7 +459,11 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
       {goalType ? (
         <View style={styles.sectionBlock}>
           <Text style={styles.blockTitle}>目标身材选择</Text>
-          <View style={styles.goalList}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.goalScroll}
+          >
             {filteredGoals.map((goal) => {
               const active = selectedGoal === goal.key;
               return (
@@ -385,20 +473,18 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
                   onPress={() => handleSelectGoal(goal)}
                   style={[styles.goalCard, active && styles.goalCardActive]}
                 >
-                  <View style={[styles.goalMonster, active && styles.goalMonsterActive]}>
-                    <Text style={styles.goalMonsterEmoji}>{goal.monsterEmoji}</Text>
-                  </View>
-                  <View style={styles.goalCopy}>
-                    <Text style={[styles.goalTitle, active && styles.goalTitleActive]}>{goal.title}</Text>
-                    <Text style={styles.goalDesc}>{goal.description}</Text>
-                    <Text style={[styles.goalHint, active && styles.goalHintActive]}>
-                      需要击败：{goal.monsterHint}
-                    </Text>
-                  </View>
+                  <Text style={styles.goalCardEmoji}>{goal.monsterEmoji}</Text>
+                  <Text style={styles.goalCardMonster}>{goal.monsterHint}</Text>
+                  <Text style={[styles.goalCardTitle, active && styles.goalCardTitleActive]}>
+                    {goal.title}
+                  </Text>
+                  <Text style={styles.goalCardDesc} numberOfLines={1}>
+                    {goal.description}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
       ) : null}
 
@@ -416,7 +502,18 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
                 <Text style={styles.targetValue}>{effectiveTargetBodyFat.toFixed(1)}%</Text>
               </View>
 
-              <BodyFatSlider value={effectiveTargetBodyFat} min={12} max={24} onChange={setTargetBodyFat} />
+              <View style={styles.sliderFeedback}>
+                <Text style={styles.sliderFeedbackCurrent}>当前体脂 {currentBodyFat.toFixed(1)}%</Text>
+                <Text style={styles.sliderFeedbackArrow}>———→</Text>
+                <Text style={styles.sliderFeedbackTarget}>目标体脂 {effectiveTargetBodyFat.toFixed(1)}%</Text>
+              </View>
+
+              <BodyFatSlider
+                value={effectiveTargetBodyFat}
+                min={profileGender === 'female' ? 18 : 10}
+                max={profileGender === 'female' ? 30 : 22}
+                onChange={setTargetBodyFat}
+              />
 
               <View style={styles.targetGrid}>
                 <View style={styles.targetMetric}>
@@ -435,12 +532,7 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
                   <Text style={styles.progressValue}>{gapData.bodyFatGap.toFixed(1)}%</Text>
                 </View>
                 <View style={styles.progressTrack}>
-                  <LinearGradient
-                    colors={[...emberGradient]}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={[styles.progressFill, { width: `${progressPercent * 100}%` }]}
-                  />
+                  <View style={[styles.progressFill, { width: `${progressPercent * 100}%` }]} />
                 </View>
               </View>
 
@@ -465,7 +557,7 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
                   </Text>
                 </View>
                 <View style={styles.monsterArt}>
-                  <PixelMonster monsterIndex={gapData.monsterIndex} defeated={false} isHit={false} size={92} />
+                  <Text style={styles.monsterEmojiBig}>{gapData.monsterEmoji}</Text>
                 </View>
               </View>
             </View>
@@ -491,7 +583,7 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
                 style={styles.riskItem}
               >
                 <View style={[styles.checkbox, active && styles.checkboxActive]}>
-                  {active ? <Ionicons name="checkmark" size={14} color={Colors.emberButtonText} /> : null}
+                  {active ? <Ionicons name="checkmark" size={14} color={Colors.bg} /> : null}
                 </View>
                 <Text style={styles.riskLabel}>{risk.label}</Text>
               </TouchableOpacity>
@@ -515,7 +607,7 @@ export default function GoalSelectScreen({ navigation, route }: Props) {
           style={styles.confirmRow}
         >
           <View style={[styles.checkbox, confirmedRisk && styles.checkboxActive]}>
-            {confirmedRisk ? <Ionicons name="checkmark" size={14} color={Colors.emberButtonText} /> : null}
+            {confirmedRisk ? <Ionicons name="checkmark" size={14} color={Colors.bg} /> : null}
           </View>
           <Text style={styles.confirmText}>我已确认以上风险信息，并接受基于此生成计划。</Text>
         </TouchableOpacity>
@@ -560,11 +652,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  genderLine: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: -8,
+    marginBottom: 4,
+  },
   statsCard: {
     borderRadius: Radius.card,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCardRaised,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceElevated,
     padding: Spacing.cardGap,
     gap: Spacing.cardGap,
   },
@@ -593,8 +692,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     paddingVertical: 10,
     paddingHorizontal: 4,
   },
@@ -613,7 +712,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   navyResult: {
-    color: Colors.ember,
+    color: Colors.accent,
     fontSize: 16,
     fontWeight: '900',
     textAlign: 'center',
@@ -632,9 +731,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 82,
     borderRadius: Radius.input,
-    backgroundColor: Colors.bgCard,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
@@ -661,15 +760,15 @@ const styles = StyleSheet.create({
     minHeight: 60,
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
   goalTypeBtnActive: {
-    borderColor: Colors.ember,
-    backgroundColor: Colors.emberLight,
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent,
   },
   goalTypeIcon: {
     fontSize: 22,
@@ -680,74 +779,78 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   goalTypeLabelActive: {
-    color: Colors.ember,
+    color: Colors.surface,
   },
-  goalList: {
-    gap: Spacing.cardGap,
+  goalScroll: {
+    gap: 10,
+    paddingRight: 20,
   },
   goalCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    minWidth: 150,
     borderRadius: Radius.card,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
-    padding: 12,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    padding: 14,
+    gap: 6,
+    alignItems: 'center',
   },
   goalCardActive: {
-    borderColor: Colors.ember,
-    backgroundColor: Colors.emberLight,
+    borderColor: Colors.accent,
+    borderWidth: 2,
+    backgroundColor: Colors.accent,
+    transform: [{ scale: 1.03 }],
   },
-  goalMonster: {
-    width: 52,
-    height: 52,
-    borderRadius: Radius.card,
-    backgroundColor: Colors.bgCardRaised,
-    alignItems: 'center',
-    justifyContent: 'center',
+  goalCardEmoji: {
+    fontSize: 36,
   },
-  goalMonsterActive: {
-    backgroundColor: Colors.emberLight,
-    borderWidth: 1,
-    borderColor: Colors.ember,
-  },
-  goalMonsterEmoji: {
-    fontSize: 28,
-  },
-  goalCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  goalTitle: {
-    color: Colors.textPrimary,
-    fontSize: 16,
-    lineHeight: 20,
-    fontWeight: '900',
-  },
-  goalTitleActive: {
-    color: Colors.ember,
-  },
-  goalDesc: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  goalHint: {
+  goalCardMonster: {
     color: Colors.textMuted,
     fontSize: 11,
-    lineHeight: 14,
     fontWeight: '700',
-    marginTop: 2,
   },
-  goalHintActive: {
-    color: Colors.ember,
+  goalCardTitle: {
+    color: Colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  goalCardTitleActive: {
+    color: Colors.surface,
+  },
+  goalCardDesc: {
+    color: Colors.textSecondary,
+    fontSize: 11,
+    lineHeight: 15,
+    textAlign: 'center',
+  },
+  sliderFeedback: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  sliderFeedbackCurrent: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  sliderFeedbackArrow: {
+    color: Colors.accent,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  sliderFeedbackTarget: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '900',
   },
   gapPanel: {
     borderRadius: Radius.card,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCardRaised,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceElevated,
     padding: Spacing.cardGap,
     gap: Spacing.cardGap,
   },
@@ -772,7 +875,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   targetValue: {
-    color: Colors.ember,
+    color: Colors.accent,
     fontSize: 22,
     lineHeight: 26,
     fontWeight: '900',
@@ -793,16 +896,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   sliderCurrent: {
-    color: Colors.ember,
+    color: Colors.accent,
     fontSize: 14,
     fontWeight: '900',
   },
   sliderTrack: {
     height: 22,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.bgCard,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
+    borderColor: Colors.border,
     justifyContent: 'center',
     paddingHorizontal: 2,
     overflow: 'visible',
@@ -814,15 +917,16 @@ const styles = StyleSheet.create({
   sliderFill: {
     height: 18,
     borderRadius: Radius.pill,
+    backgroundColor: Colors.accent,
   },
   sliderThumb: {
     position: 'absolute',
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.emberButton,
+    backgroundColor: Colors.accent,
     borderWidth: 2,
-    borderColor: Colors.bgCardRaised,
+    borderColor: Colors.surfaceElevated,
     top: -5,
     marginLeft: -16,
   },
@@ -834,8 +938,8 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     padding: 12,
     alignItems: 'center',
     gap: Spacing.microGap,
@@ -866,7 +970,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   progressValue: {
-    color: Colors.ember,
+    color: Colors.accent,
     fontSize: 16,
     lineHeight: 20,
     fontWeight: '900',
@@ -875,12 +979,13 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: Radius.pill,
     overflow: 'hidden',
-    backgroundColor: Colors.bgCard,
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
+    borderColor: Colors.border,
   },
   progressFill: {
     height: '100%',
+    backgroundColor: Colors.accent,
   },
   gapSummaryRow: {
     flexDirection: 'row',
@@ -890,8 +995,8 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     padding: 12,
     gap: Spacing.microGap,
   },
@@ -914,8 +1019,8 @@ const styles = StyleSheet.create({
     gap: Spacing.cardGap,
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     padding: 12,
   },
   monsterCopy: {
@@ -938,11 +1043,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  monsterEmojiBig: {
+    fontSize: 64,
+  },
   emptyPanel: {
     borderRadius: Radius.card,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     padding: 16,
   },
   emptyText: {
@@ -963,14 +1071,14 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: Radius.checkbox,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxActive: {
-    borderColor: Colors.ember,
-    backgroundColor: Colors.ember,
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent,
   },
   riskLabel: {
     color: Colors.textPrimary,
@@ -982,8 +1090,8 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: Radius.input,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCard,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     color: Colors.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 12,

@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { type NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import PrimaryButton from '../components/PrimaryButton';
 import { Colors, Radius, Spacing, Typography } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -37,6 +37,12 @@ const toastIconMap = {
   error: 'alert-circle-outline',
 } as const;
 
+const valueCards = [
+  { emoji: '🎮', label: '专属怪兽' },
+  { emoji: '📊', label: 'AI 饮食计算' },
+  { emoji: '⚔️', label: 'XP 升级' },
+];
+
 export default function LoginScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [phone, setPhone] = useState('');
@@ -48,7 +54,6 @@ export default function LoginScreen({ navigation }: Props) {
   const [loggingIn, setLoggingIn] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [toast, setToast] = useState<ToastState>({ message: '', tone: 'info', visible: false });
-  const [showTrainingModal, setShowTrainingModal] = useState(false);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sendCodeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,9 +181,9 @@ export default function LoginScreen({ navigation }: Props) {
     loginRef.current = setTimeout(() => {
       setLoggingIn(false);
       showToast('登录成功', 'success');
-      loginRef.current = setTimeout(() => setShowTrainingModal(true), 420);
+      loginRef.current = setTimeout(() => navigation.replace('BasicInfo'), 420);
     }, 900);
-  }, [agreed, canLogin, code, navigation, phone, showToast, validateCode, validatePhone]);
+  }, [agreed, canLogin, code, phone, showToast, validateCode, validatePhone]);
 
   useEffect(() => () => {
     clearCountdown();
@@ -191,12 +196,6 @@ export default function LoginScreen({ navigation }: Props) {
 
   return (
     <View style={styles.screen}>
-      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-        <View style={styles.glowTop} />
-        <View style={styles.glowLeft} />
-        <View style={styles.glowRight} />
-      </View>
-
       {toast.visible ? (
         <Animated.View
           style={[
@@ -209,7 +208,7 @@ export default function LoginScreen({ navigation }: Props) {
             },
           ]}
         >
-          <Ionicons name={toastIconMap[toast.tone]} size={16} color={Colors.emberButtonText} />
+          <Ionicons name={toastIconMap[toast.tone]} size={16} color={Colors.bg} />
           <Text style={styles.toastText}>{toast.message}</Text>
         </Animated.View>
       ) : null}
@@ -221,8 +220,17 @@ export default function LoginScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Text style={styles.brand}>HAND OF GOD</Text>
-            <Text style={styles.tagline}>锻造身体 · 击杀弱点</Text>
+            <Text style={styles.brand3D}>HAND OF GOD</Text>
+            <Text style={styles.tagline}>把赘肉打成经验值</Text>
+          </View>
+
+          <View style={styles.valueStrip}>
+            {valueCards.map((item) => (
+              <View key={item.label} style={styles.valueItem}>
+                <Text style={styles.valueEmoji}>{item.emoji}</Text>
+                <Text style={styles.valueLabel}>{item.label}</Text>
+              </View>
+            ))}
           </View>
 
           <View style={styles.form}>
@@ -241,7 +249,7 @@ export default function LoginScreen({ navigation }: Props) {
                   textContentType="telephoneNumber"
                   maxLength={11}
                   style={styles.input}
-                  selectionColor={Colors.ember}
+                  selectionColor={Colors.accent}
                   returnKeyType="next"
                 />
               </View>
@@ -262,7 +270,7 @@ export default function LoginScreen({ navigation }: Props) {
                   textContentType="oneTimeCode"
                   maxLength={6}
                   style={[styles.input, styles.codeInput]}
-                  selectionColor={Colors.ember}
+                  selectionColor={Colors.accent}
                   returnKeyType="done"
                 />
                 <TouchableOpacity
@@ -272,10 +280,10 @@ export default function LoginScreen({ navigation }: Props) {
                   style={[styles.codeBtn, !canSendCode && styles.codeBtnDisabled]}
                 >
                   {sendingCode ? (
-                    <ActivityIndicator size="small" color={Colors.emberButtonText} />
+                    <ActivityIndicator size="small" color={Colors.bg} />
                   ) : (
                     <Text style={[styles.codeBtnText, !canSendCode && styles.codeBtnTextDisabled]}>
-                      {countdown > 0 ? `${countdown}s` : '获取'}
+                      {countdown > 0 ? `${countdown}s` : '发送验证码'}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -285,63 +293,26 @@ export default function LoginScreen({ navigation }: Props) {
 
             <TouchableOpacity activeOpacity={0.8} onPress={() => setAgreed(current => !current)} style={styles.agreeRow}>
               <View style={[styles.checkbox, agreed && styles.checkboxOn]}>
-                {agreed ? <Ionicons name="checkmark" size={11} color={Colors.emberButtonText} /> : null}
+                {agreed ? <Ionicons name="checkmark" size={11} color={Colors.bg} /> : null}
               </View>
               <Text style={styles.agreeText}>
                 已阅读并同意 <Text style={styles.agreeLink}>用户协议</Text> 和 <Text style={styles.agreeLink}>隐私政策</Text>
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              activeOpacity={0.92}
-              onPress={handleLogin}
+            <PrimaryButton
+              label="开启锻造之旅"
               disabled={!canLogin}
-              style={[styles.loginBtn, !canLogin && styles.loginBtnDisabled]}
-            >
-              {loggingIn ? (
-                <ActivityIndicator size="small" color={Colors.emberButtonText} />
-              ) : (
-                <Text style={styles.loginBtnText}>开始登录</Text>
-              )}
-            </TouchableOpacity>
+              loading={loggingIn}
+              onPress={handleLogin}
+            />
 
             <TouchableOpacity activeOpacity={0.7} onPress={() => showToast('注册暂未接入', 'info')}>
-              <Text style={styles.footerLink}>还没有账号？立即注册</Text>
+              <Text style={styles.footerLink}>第一次来？创建战士档案</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      <Modal visible={showTrainingModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>训练基础</Text>
-            <Text style={styles.modalSub}>
-              在开始之前，请告诉我们你的训练经验
-            </Text>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => {
-                setShowTrainingModal(false);
-                navigation.replace('BasicInfo', { hasTrainingBase: true });
-              }}
-              style={[styles.modalBtn, styles.modalBtnYes]}
-            >
-              <Text style={styles.modalBtnText}>有训练基础</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => {
-                setShowTrainingModal(false);
-                navigation.replace('BasicInfo', { hasTrainingBase: false });
-              }}
-              style={[styles.modalBtn, styles.modalBtnNo]}
-            >
-              <Text style={styles.modalBtnText}>无训练基础</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -360,35 +331,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screenPaddingH,
     paddingVertical: 32,
   },
-  glowTop: {
-    position: 'absolute',
-    left: '8%',
-    right: '8%',
-    top: '5%',
-    height: 220,
-    borderRadius: 180,
-    backgroundColor: Colors.emberGlow,
-  },
-  glowLeft: {
-    position: 'absolute',
-    left: '-10%',
-    top: '18%',
-    width: 150,
-    height: 150,
-    borderRadius: 999,
-    backgroundColor: Colors.emberMuted,
-    opacity: 0.7,
-  },
-  glowRight: {
-    position: 'absolute',
-    right: '-8%',
-    bottom: '14%',
-    width: 120,
-    height: 120,
-    borderRadius: 999,
-    backgroundColor: Colors.emberLight,
-    opacity: 0.8,
-  },
   toast: {
     position: 'absolute',
     left: 16,
@@ -404,19 +346,19 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   toast_info: {
-    backgroundColor: Colors.bgCardRaised,
+    backgroundColor: Colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
+    borderColor: Colors.border,
   },
   toast_success: {
-    backgroundColor: Colors.bgCardRaised,
+    backgroundColor: Colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(46,168,74,0.20)',
+    borderColor: Colors.success,
   },
   toast_error: {
-    backgroundColor: Colors.bgCardRaised,
+    backgroundColor: Colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(229,72,77,0.20)',
+    borderColor: Colors.danger,
   },
   toastText: {
     ...Typography.caption,
@@ -425,22 +367,54 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 40,
+    gap: 4,
+    marginBottom: 24,
   },
-  brand: {
-    color: Colors.textPrimary,
-    fontSize: 40,
-    lineHeight: 44,
-    fontWeight: '800',
-    letterSpacing: 0,
+  brand3D: {
+    fontSize: 44,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    color: Colors.accent,
+    textShadowColor: '#8A8678',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 0,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   tagline: {
+    color: Colors.textPrimary,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  valueStrip: {
+    flexDirection: 'row',
+    borderRadius: Radius.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceElevated,
+    padding: 10,
+    gap: 8,
+    marginBottom: 24,
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  valueItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  valueEmoji: {
+    fontSize: 14,
+  },
+  valueLabel: {
     color: Colors.textSecondary,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 12,
     fontWeight: '700',
-    textAlign: 'center',
   },
   form: {
     width: '100%',
@@ -454,15 +428,15 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCardRaised,
+    borderRadius: Radius.input,
+    borderWidth: 3,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     paddingHorizontal: 16,
     minHeight: 54,
   },
   inputRowError: {
-    borderColor: 'rgba(229,72,77,0.35)',
+    borderColor: Colors.danger,
   },
   prefix: {
     color: Colors.textMuted,
@@ -485,13 +459,13 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 14,
     borderRadius: Radius.button,
-    backgroundColor: Colors.emberButton,
+    backgroundColor: Colors.accent,
   },
   codeBtnDisabled: {
-    opacity: 0.35,
+    opacity: 0.4,
   },
   codeBtnText: {
-    color: Colors.emberButtonText,
+    color: Colors.bg,
     fontSize: 12,
     fontWeight: '800',
   },
@@ -500,7 +474,7 @@ const styles = StyleSheet.create({
   },
   errorHint: {
     ...Typography.micro,
-    color: Colors.error,
+    color: Colors.danger,
     marginLeft: 2,
   },
   agreeRow: {
@@ -514,13 +488,13 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: Radius.checkbox,
     borderWidth: 1,
-    borderColor: Colors.emberBorder,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxOn: {
-    backgroundColor: Colors.emberButton,
-    borderColor: Colors.emberButton,
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
   },
   agreeText: {
     ...Typography.caption,
@@ -528,23 +502,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   agreeLink: {
-    color: Colors.ember,
-  },
-  loginBtn: {
-    borderRadius: Radius.button,
-    backgroundColor: Colors.emberButton,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 52,
-  },
-  loginBtnDisabled: {
-    opacity: 0.35,
-  },
-  loginBtnText: {
-    color: Colors.emberButtonText,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.3,
+    color: Colors.accent,
   },
   footerLink: {
     color: Colors.textMuted,
@@ -552,54 +510,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     paddingVertical: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: Colors.bgOverlay,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCard: {
-    width: '85%',
-    maxWidth: 360,
-    borderRadius: Radius.card,
-    borderWidth: 1,
-    borderColor: Colors.emberBorder,
-    backgroundColor: Colors.bgCardRaised,
-    padding: 24,
-    gap: 14,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    color: Colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '900',
-  },
-  modalSub: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  modalBtn: {
-    width: '100%',
-    minHeight: 48,
-    borderRadius: Radius.button,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  modalBtnYes: {
-    backgroundColor: Colors.emberButton,
-    borderColor: Colors.emberButton,
-  },
-  modalBtnNo: {
-    backgroundColor: Colors.bgCard,
-    borderColor: Colors.emberBorder,
-  },
-  modalBtnText: {
-    color: Colors.emberButtonText,
-    fontSize: 15,
-    fontWeight: '800',
   },
 });

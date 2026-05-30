@@ -1,6 +1,6 @@
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
-import { Colors, Radius } from '../theme';
+import { Colors, Radius, shadowHard } from '../theme';
 
 type Props = {
   label: string;
@@ -20,7 +20,7 @@ export default function PrimaryButton({ label, onPress, disabled, loading }: Pro
       style={[styles.base, isBlocked && styles.disabled]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={Colors.emberButtonText} />
+        <ActivityIndicator size="small" color="#FFFDF6" />
       ) : (
         <Text style={styles.text}>{label}</Text>
       )}
@@ -30,19 +30,22 @@ export default function PrimaryButton({ label, onPress, disabled, loading }: Pro
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 50,
+    minHeight: 48,
     borderRadius: Radius.button,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.emberButton,
+    backgroundColor: Colors.accent,
+    borderWidth: 4,
+    borderColor: Colors.border,
+    paddingVertical: 16,
+    ...shadowHard,
   },
   disabled: {
-    opacity: 0.38,
+    opacity: 0.4,
   },
   text: {
-    color: Colors.emberButtonText,
+    color: '#FFFDF6',
     fontSize: 16,
-    fontWeight: '900',
-    letterSpacing: 0,
+    fontWeight: '800',
   },
 });

@@ -1,0 +1,33 @@
+重写 C:\Users\86180\Desktop\上帝之手\expo-app\screens\ProgressScreen.tsx
+
+**新设计：数据追踪仪表盘**
+
+1. 体重记录区：
+   - 输入框 + 日期选择 → 记录今日体重
+   - 存 AsyncStorage: progress_weight_v1: { records: [{date, weight}] }
+   - 手动柱状图显示最近7天体重趋势（保留现有chart风格）
+   - 显示变化量：-1.2kg / 本周 之类
+
+2. 身体围度记录区（可折叠）：
+   - 胸围/腰围/臀围/臂围/大腿围 五个输入
+   - 存 AsyncStorage: progress_measurements_v1
+   - 显示最近一次记录 vs 上次的变化
+
+3. 训练统计区：
+   - 本周训练天数 / 7
+   - 本月训练天数 / 本月总天数
+   - 总训练次数
+
+4. 饮食统计区：
+   - 本周平均摄入 kcal
+   - 蛋白质达标率（达标记天数/总天数）
+
+5. 保留照片对比区
+
+**AsyncStorage 读取:**
+- progress_weight_v1: { records: Array<{date: string, weight: number}> }
+- progress_measurements_v1: { records: Array<{date, chest, waist, hip, arm, thigh}> }
+- today_training_v1: 读训练完成情况
+- today_diet_v1: 读饮食数据
+
+验证: npx tsc --noEmit

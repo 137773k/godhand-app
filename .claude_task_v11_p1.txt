@@ -1,0 +1,32 @@
+# v11新粗野主义 Part1 — 基础设施
+见theme参考:  C:\Users\86180\Desktop\上帝之手\.claude_task_v11_theme.txt
+
+## 1. 重写 theme.ts
+完整替换为参考文件内容。删除旧的金色/余烬/渐变相关代码。
+
+## 2. 重写 ScreenContainer.tsx
+移除: LinearGradient, 光斑View, noGradient属性
+改为: 纯色 bg:Colors.bg, SafeAreaView包裹, 保留scroll
+结构: <View bg> → <SafeAreaView flex:1> → scroll?ScrollView:View → children
+
+## 3. 重写 PrimaryButton.tsx
+- 黑底白字, bg:Colors.accent, color:'#FFFDF6'
+- borderWidth:4 borderColor:Colors.border borderRadius:14
+- 硬阴影 shadowHard, fontWeight:800 fontSize:16 py:16
+- 去掉渐变/glow/透明度
+
+## 4. 重写 BackButton.tsx
+- icon/文字色: Colors.accent / Colors.textPrimary
+- 边框: 黑色细线, 去掉金色
+
+## 5. 重写 SectionHeader.tsx
+- 标题 Colors.textPrimary, 副标题 Colors.textMuted, 去掉金色
+
+## 6. 重写 ErrorBoundary.tsx
+- 卡片用 cardBorder风格, 按钮用新PrimaryButton风格
+
+## 7. 更新 App.tsx
+- navigation theme: 主色/背景改为新色, 状态栏 dark-content
+
+## 验证
+npx tsc --noEmit 零错误

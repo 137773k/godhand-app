@@ -1,6 +1,6 @@
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { Typography } from '../theme';
+import { Colors, Typography } from '../theme';
 
 type Props = {
   title: string;
@@ -21,19 +21,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    color: Typography.hero.color,
-    fontSize: Typography.hero.fontSize,
-    lineHeight: Typography.hero.lineHeight,
-    fontWeight: '900',
-    fontFamily: Platform.select({
-      ios: 'Arial Black',
-      android: 'sans-serif-black',
-      default: 'Arial Black',
-    }),
+    ...Typography.h2,
   },
   subtitle: {
-    color: Typography.subtitle.color,
-    fontSize: Typography.subtitle.fontSize,
-    lineHeight: Typography.subtitle.lineHeight,
+    ...Typography.caption,
   },
 });
